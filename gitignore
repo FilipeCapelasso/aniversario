@@ -1,6 +1,0 @@
-node_modules
-.env
-supabase/.env
-supabase/.temp
-.vercel
-.DS_Store
