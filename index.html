@@ -98,9 +98,9 @@ body.am{background:#0f1220}body.am:before{display:none}
 <section><h2>Contagem regressiva</h2><div class="cd" id="cd" role="timer" aria-live="off"></div></section>
 
 <section id="confirmar"><h2>Confirme sua presença</h2><div class="card">
-<p>Digite seu nome abaixo para confirmar. Só quem recebeu o convite consegue confirmar.</p>
+<p>Quer celebrar com a gente? Digite seu nome completo e confirme sua presença. Os anfitriões analisam cada pedido e, quando aprovado, seu nome aparece na lista abaixo.</p>
 <form id="f" autocomplete="off"><label for="nm" class="sr" style="position:absolute;left:-9999px">Seu nome</label>
-<input id="nm" maxlength="80" placeholder="Digite seu nome" required><button class="btn" style="width:100%;justify-content:center">VERIFICAR</button></form><p id="msg" role="alert"></p></div></section>
+<input id="nm" maxlength="80" placeholder="Digite seu nome" required><button class="btn" style="width:100%;justify-content:center">CONFIRMAR PRESENÇA</button></form><p id="msg" role="alert"></p></div></section>
 
 <section><h2>Quem já confirmou</h2><div class="card" style="text-align:center"><div id="count">0</div><p id="ct">pessoas já confirmaram</p></div><ul id="ls" aria-live="polite"></ul></section>
 
@@ -155,16 +155,17 @@ function tick(){const d=date-Date.now(),el=$('#cd');if(d<=0){el.innerHTML='<div 
  el.innerHTML=v.map(([n,l])=>`<div class="card"><strong>${String(Math.floor(n)).padStart(2,'0')}</strong>${l}</div>`).join('')}
 tick();setInterval(tick,1000);
 const msg=t=>$('#msg').textContent=t,dg=$('#dg'),seen=new Set();
-$('#f').onsubmit=async e=>{e.preventDefault();msg('');const n=$('#nm').value.replace(/\s+/g,' ').trim();if(n.length<3)return msg('Digite seu nome completo.');
- const{data,error}=await sb.rpc('verify_guest',{p_name:n});
- if(error)return msg(/rate/.test(error.message)?'Muitas tentativas. Aguarde alguns minutos e tente de novo.':'Não foi possível verificar agora. Tente novamente.');
- if(!data.found)return msg('❌ Não encontramos esse nome na lista de convidados. Verifique se digitou seu nome corretamente ou fale com os organizadores.');
- dg.innerHTML='<h2>🎉 Presença localizada!</h2><p>Olá, <b id="gn"></b>!</p><p></p><div class="row"><button class="btn" id="ok">CONFIRMAR PRESENÇA</button><button class="btn o" id="no">CANCELAR</button></div>';
- $('#gn').textContent=data.name;dg.querySelectorAll('p')[1].textContent=data.already?'Sua confirmação já foi enviada e aguarda aprovação.':'Você está na lista de convidados. Deseja confirmar sua presença?';
- dg.showModal();$('#no').onclick=()=>dg.close();
- $('#ok').onclick=async()=>{if(data.already)return dg.close();const{data:r,error:er}=await sb.rpc('confirm_attendance',{p_name:n});
-  if(er||!r.ok){dg.close();return msg('Não foi possível confirmar. Tente novamente.')}
-  dg.innerHTML=`<div style="font-size:56px">🎉</div><h2>Presença confirmada!</h2><p>${C.names.replace(/&/g,'&amp;')} estão esperando por você!</p><p style="margin-top:8px"><b>${C.dayLabel} • ${C.place}</b></p><div class="row"><button class="btn" onclick="dg.close()">FECHAR</button></div>`;boom();$('#f').reset()}};
+$('#f').onsubmit=async e=>{e.preventDefault();msg('');const n=$('#nm').value.replace(/\s+/g,' ').trim(),b=e.target.querySelector('button');
+ if(n.length<3||/[<>]/.test(n))return msg('Digite seu nome completo.');
+ b.disabled=true;const{data,error}=await sb.rpc('confirm_attendance',{p_name:n});b.disabled=false;
+ if(error)return msg(/rate/.test(error.message)?'Muitas tentativas. Aguarde alguns minutos e tente de novo.':'Não foi possível enviar agora. Tente novamente.');
+ if(!data||!data.ok)return msg('Não foi possível enviar. Confira seu nome e tente novamente.');
+ const w=date.toLocaleString('pt-BR',{weekday:'long',day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'}),f=n.split(' ')[0];
+ dg.innerHTML='<div style="font-size:56px">🎉</div><h2 id="dh"></h2><p id="dp"></p><p style="margin-top:12px"><b>📅 <span id="dw"></span></b><br><b>📍 <span id="dl"></span></b></p><p style="margin-top:12px;font-size:.92em;opacity:.85">💌 Lembrete: guarde a data, chame quem você ama e venha com energia para dançar e celebrar!</p><div class="row"><button class="btn o" id="dc">📅 SALVAR NA AGENDA</button><button class="btn" id="dx">FECHAR</button></div>';
+ $('#dh').textContent=data.already?'Já recebemos seu pedido!':'Obrigado, '+f.charAt(0).toUpperCase()+f.slice(1).toLowerCase()+'!';
+ $('#dp').textContent=data.already?'Seu nome já está com a gente. Assim que os anfitriões aprovarem, ele aparece na lista de confirmados.':'Recebemos sua confirmação com muito carinho. Os anfitriões vão analisar e, assim que for aprovada, seu nome aparece na lista de confirmados aqui no site.';
+ $('#dw').textContent=w;$('#dl').textContent=$('[data-loc2]').textContent;$('#dc').onclick=()=>$('#cal').click();$('#dx').onclick=()=>dg.close();
+ dg.showModal();boom();$('#f').reset()};
 async function load(){const{data}=await sb.rpc('public_confirmed');if(!data)return;const ul=$('#ls');ul.innerHTML='';
  data.forEach(({name})=>{const li=document.createElement('li');li.textContent='✅ '+name;if(seen.size&&!seen.has(name))li.className='new';seen.add(name);ul.append(li)});
  countUp($('#count'),data.length);$('#ct').textContent=data.length===1?'pessoa já confirmou':'pessoas já confirmaram'}
