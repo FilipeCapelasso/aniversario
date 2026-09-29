@@ -55,6 +55,20 @@ section>.card:not(.cd){padding:26px}
  #f{display:grid;grid-template-columns:1fr auto;gap:0 14px;align-items:center}#f input{margin:16px 0 0}#f .btn{width:auto!important;margin-top:16px}
  section:nth-of-type(1)>.card p{font-size:20px;max-width:780px}
 }
+@media(min-width:1200px){
+ section,header{max-width:1760px;padding-inline:clamp(40px,5vw,120px)}
+ #nv{max-width:1760px;width:calc(100% - clamp(48px,6vw,140px));padding:12px 30px}#nv a{font-size:16px}
+ header{column-gap:clamp(70px,8vw,180px)}header .big{font-size:clamp(280px,27vw,560px)}
+ h1{font-size:clamp(84px,7.4vw,150px)}h2{font-size:clamp(48px,3.4vw,68px)}
+ section:nth-of-type(1)>.card p{max-width:none;font-size:clamp(20px,1.5vw,26px)}
+ section>.card:not(.cd){padding:clamp(30px,2.4vw,48px)}
+ .grid{gap:22px}.grid .card{padding:30px}.grid b{font-size:1.15em;margin-bottom:6px}
+ .cd{gap:22px}.cd strong{font-size:clamp(76px,7vw,132px)}.cd .card{padding:36px 4px}
+ #ls{grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}li{padding:15px 20px}
+ #count{font-size:clamp(80px,7vw,120px)}input{padding:20px 24px}
+}
+@media(min-width:1600px){body{font-size:19px}}
+@media(min-width:2000px){body{font-size:22px}}
 #pr{position:fixed;top:0;left:0;height:4px;width:0;z-index:100;background:linear-gradient(90deg,var(--mag),var(--gold),var(--cy))}
 .rv{opacity:0;transform:translateY(30px);transition:opacity .8s,transform .8s}.rv.in{opacity:1;transform:none}
 section h2:after{content:"";display:block;width:64px;height:4px;border-radius:9px;margin-top:10px;background:linear-gradient(90deg,var(--mag),var(--gold))}
@@ -180,10 +194,18 @@ $('#f').onsubmit=async e=>{e.preventDefault();msg('');const n=$('#nm').value.rep
  $('#dp').textContent=data.already?'Seu nome já está com a gente. Assim que os anfitriões aprovarem, ele aparece na lista de confirmados.':'Recebemos sua confirmação com muito carinho. Os anfitriões vão analisar e, assim que for aprovada, seu nome aparece na lista de confirmados aqui no site.';
  $('#dw').textContent=w;$('#dl').textContent=$('[data-loc2]').textContent;$('#dc').onclick=()=>$('#cal').click();$('#dx').onclick=()=>dg.close();
  dg.showModal();boom();$('#f').reset()};
-async function load(){const{data}=await sb.rpc('public_confirmed');if(!data)return;const ul=$('#ls');ul.innerHTML='';
- data.forEach(({name})=>{const li=document.createElement('li');li.textContent='✅ '+name;if(seen.size&&!seen.has(name))li.className='new';seen.add(name);ul.append(li)});
- countUp($('#count'),data.length);$('#ct').textContent=data.length===1?'pessoa já confirmou':'pessoas já confirmaram'}
-if(!isAdm){load();setInterval(load,20000)}
+let first=true,busy=false,again=false;const nodes=new Map();
+async function load(){if(busy){again=true;return}busy=true;
+ try{const{data,error}=await sb.rpc('public_confirmed');if(error||!data)return;const ul=$('#ls'),names=data.map(x=>x.name),keep=new Set(names);
+  nodes.forEach((li,n)=>{if(!keep.has(n)){li.remove();nodes.delete(n)}});
+  names.forEach((n,i)=>{let li=nodes.get(n);if(!li){li=document.createElement('li');li.textContent='✅ '+n;if(!first)li.className='new';nodes.set(n,li)}
+   if(ul.children[i]!==li)ul.insertBefore(li,ul.children[i]||null)});
+  first=false;countUp($('#count'),data.length);$('#ct').textContent=data.length===1?'pessoa já confirmou':'pessoas já confirmaram'}
+ finally{busy=false;if(again){again=false;load()}}}
+if(!isAdm){load();
+ sb.channel('confirmed').on('broadcast',{event:'changed'},()=>load()).subscribe();
+ setInterval(load,15000);addEventListener('online',load);addEventListener('focus',load);
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden)load()})}
 if(!isAdm){const pr=$('#pr');addEventListener('scroll',()=>pr.style.width=scrollY/Math.max(1,document.documentElement.scrollHeight-innerHeight)*100+'%',{passive:true});
  const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}}),{threshold:.1});
  document.querySelectorAll('#pub section,.grid .card').forEach(e=>{e.classList.add('rv');io.observe(e)});
