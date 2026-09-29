@@ -1,5 +1,6 @@
 <!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Capelasso & Anne — 19 anos</title>
+<meta name="theme-color" content="#160a2a"><link rel="icon" href="data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27><text y=%27.9em%27 font-size=%2790%27>🎉</text></svg>">
 <meta property="og:title" content="Você está convidado! Capelasso & Anne — 19 anos"><meta property="og:description" content="Estância · Dia 10. Confirme sua presença.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;1,9..144,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
@@ -46,7 +47,7 @@ body.am{background:#0f1220}body.am:before{display:none}
 #adm h1,#adm h2{font-family:system-ui,sans-serif;font-weight:700;line-height:1.3}#adm h1{font-size:22px}#adm h2{font-size:17px;margin:26px 0 10px}
 #adm .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;backdrop-filter:none}
 #adm .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}#adm .stats b{display:block;font-size:30px}#adm .stats span{color:var(--mut)}
-#adm input,#adm button,#adm select{font:inherit;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:#0d1020;color:var(--ink);margin:0;width:auto}
+#adm input,#adm button,#adm select,#adm textarea{font:inherit;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:#0d1020;color:var(--ink);margin:0;width:auto}
 #adm button{cursor:pointer}#adm button.p{background:var(--acc);border-color:var(--acc);color:#fff}#adm button.ok{color:var(--ok)}#adm button.bad{color:var(--bad)}
 #adm .bar{display:flex;height:14px;border-radius:9px;overflow:hidden;margin:12px 0 6px;background:#0d1020}#adm .bar i{display:block;transition:width .6s}
 #adm .leg{display:flex;flex-wrap:wrap;gap:14px;color:var(--mut);font-size:13px}
@@ -87,7 +88,7 @@ body.am{background:#0f1220}body.am:before{display:none}
 <section><h2>Quem já confirmou</h2><div class="card" style="text-align:center"><div id="count">0</div><p id="ct">pessoas já confirmaram</p></div><ul id="ls" aria-live="polite"></ul></section>
 
 <section style="text-align:center"><button class="btn" id="sh">📲 COMPARTILHAR CONVITE</button></section>
-<footer><p>Feito com carinho para celebrar mais um ano de histórias, amizade e momentos inesquecíveis. ❤️</p><p style="margin-top:8px"><b>Capelasso & Anne — 19 anos 🎂</b></p><p style="margin-top:16px"><a href="#/admin" style="color:inherit;opacity:.35;text-decoration:none;font-size:12px">Área administrativa</a></p></footer>
+<footer><p>Feito com carinho para celebrar mais um ano de histórias, amizade e momentos inesquecíveis. ❤️</p><p style="margin-top:8px"><b>Capelasso & Anne — 19 anos 🎂</b></p></footer>
 <dialog id="dg"></dialog>
 
 </div>
@@ -99,21 +100,13 @@ body.am{background:#0f1220}body.am:before{display:none}
 <h2>🛡️ Moderação</h2><div class="card" id="mod"></div>
 <h2>Convidados</h2><div class="card">
 <form id="add" class="row"><input id="an" placeholder="Nome do convidado" maxlength="80" required><input id="ao" placeholder="Observação (opcional)"><button class="p">Adicionar</button></form>
+<details style="margin:10px 0"><summary style="cursor:pointer">📋 Importar lista (um nome por linha)</summary><form id="imp"><textarea id="il" rows="6" style="width:100%;margin:8px 0" placeholder="João Silva&#10;Maria Souza"></textarea><button class="p">Importar</button></form></details>
 <div class="row"><input id="q" type="search" placeholder="Buscar por nome"><select id="fl"><option value="all">Todos</option><option value="pending">Pendentes</option><option value="approved">Aprovados</option><option value="rejected">Recusados</option><option value="none">Não confirmaram</option></select></div>
 <div id="gl"></div></div>
 <h2>Evento</h2><form id="ev" class="card row"><input id="et" placeholder="Título"><input id="ed" type="datetime-local"><input id="el" placeholder="Local"><button class="p">Salvar</button></form>
 <h2>Histórico de ações</h2><div class="card" id="lg"></div></div></main>
 </div>
-<script type="module">
-import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm";
-
-/* =========================================================
-   CAPELASSO & ANNE — CONVITE COMPLETO
-   Tudo do site em um único index.html.
-   O Telegram NÃO fica aqui: o token deve permanecer no
-   Supabase Edge Function por segurança.
-   ========================================================= */
-
+<script>
 // Único lugar para editar o que é do convite (a data/local também podem ser mudados em Admin > Evento)
 window.CFG = {
   SUPABASE_URL: "https://mkzkasgaxzpynrhrgmrt.supabase.co",
@@ -121,11 +114,13 @@ window.CFG = {
   names: "Capelasso & Anne", age: 19, place: "Estância", dayLabel: "Dia 10",
   eventDate: "2026-10-10T20:00:00-05:00"
 };
-
-const isAdm=location.hash==='#/admin';
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script>
+const admHash=()=>/^#\/?admin$/.test(location.hash),isAdm=/^\/admin\/?$/.test(location.pathname)||admHash();
 if(isAdm){document.body.classList.add('am');document.getElementById('pub').hidden=true;document.getElementById('adm').hidden=false;document.title='Painel do evento'}
-addEventListener('hashchange',()=>location.reload());
-const C=CFG,$=s=>document.querySelector(s),sb=createClient(C.SUPABASE_URL,C.SUPABASE_ANON_KEY),RM=matchMedia('(prefers-reduced-motion:reduce)').matches;
+addEventListener('hashchange',()=>{if(!/^\/admin/.test(location.pathname)&&admHash()!==isAdm)location.reload()});
+const C=CFG,$=s=>document.querySelector(s),sb=supabase.createClient(C.SUPABASE_URL,C.SUPABASE_ANON_KEY),RM=matchMedia('(prefers-reduced-motion:reduce)').matches;
 let date=new Date(C.eventDate);
 if(!isAdm)document.title=CFG.names+' — '+CFG.age+' anos';
 sb.from('event_settings').select('*').single().then(({data:d})=>{if(!d)return;date=new Date(d.event_date);
@@ -160,6 +155,8 @@ if(!isAdm){load();setInterval(load,20000)}
 $('#sh').onclick=async()=>{const u=location.href.split('#')[0],t='🎉 Você está convidado para o aniversário do Capelasso & Anne!\nConfira os detalhes e confirme sua presença:';
  try{if(navigator.share)await navigator.share({title:'Convite',text:t,url:u});else{await navigator.clipboard.writeText(t+'\n'+u);$('#sh').textContent='✅ LINK COPIADO'}}catch(_){}};
 
+</script>
+<script>
 (()=>{
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const LB={none:'Não confirmou',pending:'⏳ Pendente',approved:'✅ Aprovado',rejected:'❌ Recusado'};let G=[];
@@ -195,7 +192,11 @@ document.addEventListener('click',async e=>{const b=e.target.closest('[data-a]')
  if(r?.error)alert('Erro: '+r.error.message);load()});
 $('#add').onsubmit=async e=>{e.preventDefault();const{error}=await sb.from('guests').insert({name:$('#an').value.trim(),note:$('#ao').value.trim()||null});
  if(error)return alert(/duplicate/.test(error.message)?'Esse nome já está cadastrado.':error.message);e.target.reset();load()};
+$('#imp').onsubmit=async e=>{e.preventDefault();const b=e.target.querySelector('button');b.disabled=true;
+ const names=[...new Set($('#il').value.split('\n').map(x=>x.replace(/\s+/g,' ').trim()).filter(x=>x.length>=2))];let ok=0;
+ for(const name of names){const{error}=await sb.from('guests').insert({name});if(!error)ok++}
+ b.disabled=false;e.target.reset();alert(ok+' adicionado(s)'+(names.length-ok?', '+(names.length-ok)+' ignorado(s) (já existiam ou inválidos).':'.'));load()};
 $('#ev').onsubmit=async e=>{e.preventDefault();const{error}=await sb.from('event_settings').update({event_title:$('#et').value,location:$('#el').value,event_date:new Date($('#ed').value).toISOString()}).eq('id',1);alert(error?error.message:'Evento salvo.')};
 $('#q').oninput=draw;$('#fl').onchange=draw;setInterval(()=>!$('#app').hidden&&load(),30000);if(isAdm)boot();
 })();
-</script><noscript>Este convite precisa de JavaScript ativado para confirmar presença.</noscript></body></html>
+</script></body></html>
