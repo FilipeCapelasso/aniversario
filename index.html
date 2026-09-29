@@ -125,6 +125,11 @@ body.am{background:#0f1220}body.am:before{display:none}
 </div>
 <div id="adm" hidden><main>
 <form id="login" class="card"><h1>Painel do evento</h1><input id="em" type="email" placeholder="E-mail" required autocomplete="username"><input id="pw" type="password" placeholder="Senha" required autocomplete="current-password"><button class="p" style="width:100%">Entrar</button><p id="err" style="color:var(--bad)" role="alert"></p></form>
+<dialog id="eg" style="max-width:420px;width:calc(100% - 32px);text-align:left"><form id="ef"><h2 style="margin:0 0 14px">✏️ Editar convidado</h2>
+<label>Nome<input id="en" maxlength="80" required style="width:100%;margin:4px 0 12px"></label>
+<label>Celular (DDD + número)<input id="ep" type="tel" placeholder="(68) 99999-8888" style="width:100%;margin:4px 0 12px"></label>
+<label>Observação<input id="eo" maxlength="120" style="width:100%;margin:4px 0 16px"></label>
+<div class="row"><button class="p">Salvar</button><button type="button" id="ec">Cancelar</button><button type="button" class="bad" id="er" style="margin-left:auto">🗑️ Remover</button></div></form></dialog>
 <div id="app" hidden>
 <div class="row" style="justify-content:space-between"><h1>🎛️ Painel do evento</h1><button id="out">Sair</button></div>
 <div class="stats" id="st"></div><div class="card" style="margin-top:12px"><div class="bar" id="bar"></div><div class="leg" id="leg"></div></div>
@@ -222,19 +227,19 @@ async function load(){
  if(s){$('#et').value=s.event_title||'';$('#el').value=s.location||'';$('#ed').value=s.event_date?new Date(new Date(s.event_date)-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,16):''}
  draw()}
 const fmtP=p=>!p?'':p.length===13?'+55 ('+p.slice(2,4)+') '+p.slice(4,9)+'-'+p.slice(9):p.length===12?'+55 ('+p.slice(2,4)+') '+p.slice(4,8)+'-'+p.slice(8):p;
-const acts=g=>{const k=st(g);return`<span><button data-a="phone" data-id="${g.id}">📱 Celular</button> ${k==='approved'&&g.phone?`<button class="ok" data-a="send" data-id="${g.id}">📲 Enviar msg</button> `:''}${k!=='approved'&&k!=='none'?`<button class="ok" data-a="approved" data-id="${g.id}">Aprovar</button> `:''}${k==='pending'?`<button class="bad" data-a="rejected" data-id="${g.id}">Recusar</button> `:''}${k!=='none'?`<button class="bad" data-a="del" data-id="${g.id}">Excluir confirmação</button>`:''}</span>`};
-const rowH=(g,full)=>`<div class="g"><span><b>${esc(g.name)}</b> <span class="tag">${LB[st(g)]}</span>${g.note?` <small>${esc(g.note)}</small>`:''}<br><small>📱 ${g.phone?esc(fmtP(g.phone)):'sem celular'}${[].concat(g.attendance)[0]?.msg_sent_at?' · ✅ mensagem enviada':''}</small>${full&&[].concat(g.attendance)[0]?`<br><small>${new Date([].concat(g.attendance)[0].confirmed_at).toLocaleString('pt-BR')}</small>`:''}</span>${acts(g)}${full?`<span><button data-a="edit" data-id="${g.id}">Editar</button> <button class="bad" data-a="rm" data-id="${g.id}">Remover convidado</button></span>`:''}</div>`;
+const acts=g=>{const k=st(g);return`<span><button data-a="edit" data-id="${g.id}">✏️ Editar</button> ${k==='approved'&&g.phone?`<button class="ok" data-a="send" data-id="${g.id}">📲 Enviar msg</button> `:''}${k!=='approved'&&k!=='none'?`<button class="ok" data-a="approved" data-id="${g.id}">Aprovar</button> `:''}${k==='pending'?`<button class="bad" data-a="rejected" data-id="${g.id}">Recusar</button> `:''}${k!=='none'?`<button class="bad" data-a="del" data-id="${g.id}">Excluir confirmação</button>`:''} <button class="bad" data-a="rm" data-id="${g.id}">🗑️ Remover</button></span>`};
+const rowH=(g,full)=>`<div class="g"><span><b>${esc(g.name)}</b> <span class="tag">${LB[st(g)]}</span>${g.note?` <small>${esc(g.note)}</small>`:''}<br><small>📱 ${g.phone?esc(fmtP(g.phone)):'sem celular'}${[].concat(g.attendance)[0]?.msg_sent_at?' · ✅ mensagem enviada':''}</small>${full&&[].concat(g.attendance)[0]?`<br><small>${new Date([].concat(g.attendance)[0].confirmed_at).toLocaleString('pt-BR')}</small>`:''}</span>${acts(g)}</div>`;
 function draw(){const q=$('#q').value.toLowerCase(),f=$('#fl').value;
  $('#mod').innerHTML=G.filter(g=>st(g)==='pending').map(g=>rowH(g,true)).join('')||'Nenhuma confirmação pendente.';
- $('#gl').innerHTML=G.filter(g=>(f==='all'||st(g)===f)&&g.name.toLowerCase().includes(q)).map(g=>rowH(g)).join('')||'Nenhum convidado.'}
+ $('#gl').innerHTML=G.filter(g=>(f==='all'||st(g)===f)&&(g.name.toLowerCase().includes(q)||(q.replace(/\D/g,'')&&(g.phone||'').includes(q.replace(/\D/g,''))))).map(g=>rowH(g)).join('')||'Nenhum convidado.'}
 document.addEventListener('click',async e=>{const b=e.target.closest('[data-a]');if(!b)return;const id=b.dataset.id,a=b.dataset.a,g=G.find(x=>x.id===id);let r;
  if(a==='approved')r=await sb.from('attendance').update({status:'approved',approved_at:new Date(),rejected_at:null,approved_by:'painel'}).eq('guest_id',id);
  else if(a==='rejected')r=await sb.from('attendance').update({status:'rejected',rejected_at:new Date(),approved_at:null,rejected_by:'painel'}).eq('guest_id',id);
  else if(a==='del'){if(!confirm('Excluir a confirmação de '+g.name+'?'))return;r=await sb.from('attendance').delete().eq('guest_id',id)}
- else if(a==='rm'){if(!confirm('Remover '+g.name+' da lista de convidados?'))return;r=await sb.from('guests').delete().eq('id',id)}
+ else if(a==='rm'){if(!confirm('Remover '+g.name+' da lista? A confirmação dele(a) também será apagada.'))return;r=await sb.from('guests').delete().eq('id',id)}
  else if(a==='phone'){const v=prompt('Celular de '+g.name+' (DDD + número; vazio = apagar):',g.phone||'');if(v===null)return;r=await sb.from('guests').update({phone:v.trim()||null}).eq('id',id)}
  else if(a==='send'){const{data:x,error:er}=await sb.rpc('admin_send_confirmation',{p_guest:id});if(er)alert(er.message);else if(x.result==='sent')alert('Mensagem enviada para '+g.name+'.');else if(x.link)window.open(x.link,'_blank');else alert('Sem celular cadastrado.')}
- else if(a==='edit'){const nn=prompt('Nome:',g.name);if(!nn)return;r=await sb.from('guests').update({name:nn.trim()}).eq('id',id)}
+ else if(a==='edit'){openEdit(g);return}
  if(r?.error)alert('Erro: '+r.error.message.replace('telefone_invalido','Celular inválido. Use DDD + número.'));load()});
 $('#add').onsubmit=async e=>{e.preventDefault();const{error}=await sb.from('guests').insert({name:$('#an').value.trim(),note:$('#ao').value.trim()||null,phone:$('#ap').value.trim()||null});
  if(error)return alert(/duplicate/.test(error.message)?'Esse nome já está cadastrado.':/telefone/.test(error.message)?'Celular inválido. Use DDD + número.':error.message);e.target.reset();load()};
@@ -243,6 +248,12 @@ $('#imp').onsubmit=async e=>{e.preventDefault();const b=e.target.querySelector('
  let ok=0;for(const r of L){const{error}=await sb.from('guests').insert(r);if(!error)ok++}
  b.disabled=false;e.target.reset();alert(ok+' adicionado(s)'+(L.length-ok?', '+(L.length-ok)+' ignorado(s) (já existiam ou celular inválido).':'.'));load()};
 $('#ev').onsubmit=async e=>{e.preventDefault();const{error}=await sb.from('event_settings').update({event_title:$('#et').value,location:$('#el').value,event_date:new Date($('#ed').value).toISOString()}).eq('id',1);alert(error?error.message:'Evento salvo.')};
+let EG=null;const eg=$('#eg');
+function openEdit(g){EG=g;$('#en').value=g.name;$('#ep').value=fmtP(g.phone);$('#eo').value=g.note||'';eg.showModal()}
+$('#ec').onclick=()=>eg.close();
+$('#er').onclick=async()=>{if(!confirm('Remover '+EG.name+' da lista? A confirmação dele(a) também será apagada.'))return;const{error}=await sb.from('guests').delete().eq('id',EG.id);eg.close();if(error)alert('Erro: '+error.message);load()};
+$('#ef').onsubmit=async e=>{e.preventDefault();const{error}=await sb.from('guests').update({name:$('#en').value.replace(/\s+/g,' ').trim(),phone:$('#ep').value.trim()||null,note:$('#eo').value.trim()||null}).eq('id',EG.id);
+ if(error)return alert(/duplicate/.test(error.message)?'Já existe um convidado com esse nome.':/telefone/.test(error.message)?'Celular inválido. Use DDD + número.':'Erro: '+error.message);eg.close();load()};
 $('#q').oninput=draw;$('#fl').onchange=draw;setInterval(()=>!$('#app').hidden&&load(),30000);if(isAdm)boot();
 })();
 </script></body></html>
