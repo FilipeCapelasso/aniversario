@@ -1,7 +1,7 @@
 <!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Capelasso & Anne — 19 anos</title>
+<title>Capelasso & Anne — 20 anos</title>
 <meta name="theme-color" content="#160a2a"><link rel="icon" href="data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27><text y=%27.9em%27 font-size=%2790%27>🎉</text></svg>">
-<meta property="og:title" content="Você está convidado! Capelasso & Anne — 19 anos"><meta property="og:description" content="Estância · Dia 10. Confirme sua presença.">
+<meta property="og:title" content="Você está convidado! Capelasso & Anne — 20 anos"><meta property="og:description" content="Estância · Dia 10. Confirme sua presença.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;1,9..144,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
@@ -133,7 +133,7 @@ body.am{background:#0f1220}body.am:before{display:none}
 <section id="lista"><h2>Quem já confirmou</h2><div class="card" style="text-align:center"><div id="count">0</div><p id="ct">pessoas já confirmaram</p></div><ul id="ls" aria-live="polite"></ul></section>
 
 <section style="text-align:center"><button class="btn" id="sh">📲 COMPARTILHAR CONVITE</button></section>
-<footer><p>Feito com carinho para celebrar mais um ano de histórias, amizade e momentos inesquecíveis. ❤️</p><p style="margin-top:8px"><b>Capelasso & Anne — 19 anos 🎂</b></p></footer>
+<footer><p>Feito com carinho para celebrar mais um ano de histórias, amizade e momentos inesquecíveis. ❤️</p><p style="margin-top:8px"><b>Capelasso & Anne — 20 anos 🎂</b></p></footer>
 <dialog id="dg"></dialog>
 
 </div>
@@ -156,7 +156,7 @@ body.am{background:#0f1220}body.am:before{display:none}
 window.CFG = {
   SUPABASE_URL: "https://mkzkasgaxzpynrhrgmrt.supabase.co",
   SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1remthc2dheHpweW5yaHJnbXJ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA2NDQxNDYsImV4cCI6MjEwNjIyMDE0Nn0.Aax_OwDl4HZHMbN0LAqmGQvd9OqA_simRLWxBmINJCk", // a anon key é pública; NUNCA use a service_role aqui
-  names: "Capelasso & Anne", age: 19, place: "Estância", dayLabel: "Dia 10",
+  names: "Capelasso & Anne", age: 20, place: "Estância", dayLabel: "Dia 10",
   eventDate: "2026-10-10T20:00:00-05:00"
 };
 </script>
@@ -176,8 +176,8 @@ function boom(){if(RM)return;const c=$('#cf'),x=c.getContext('2d'),cols=['#ff3d8
  const p=Array.from({length:150},()=>({x:innerWidth/2,y:innerHeight*.45,vx:(Math.random()-.5)*18,vy:-Math.random()*15-4,s:5+Math.random()*6,c:cols[Math.random()*5|0],r:0,vr:Math.random()*.3-.15}));let t=0;
  (function f(){x.clearRect(0,0,c.width,c.height);p.forEach(a=>{a.vy+=.35;a.x+=a.vx;a.y+=a.vy;a.r+=a.vr;x.save();x.translate(a.x,a.y);x.rotate(a.r);x.fillStyle=a.c;x.fillRect(-a.s/2,-a.s/2,a.s,a.s*.6);x.restore()});++t<160?requestAnimationFrame(f):x.clearRect(0,0,c.width,c.height)})()}
 function countUp(el,to){if(RM){el.textContent=to;return}const s=+el.textContent||0,t0=performance.now();(function f(t){const k=Math.min((t-t0)/900,1);el.textContent=Math.round(s+(to-s)*k);k<1&&requestAnimationFrame(f)})(t0)}
-// Momento de abertura: 19 sobe de 0 a 19 e explode em confete
-$('#n19').textContent=0;!isAdm&&setTimeout(()=>{countUp($('#n19'),C.age);setTimeout(boom,950)},400);
+// Momento de abertura: 20 sobe de 0 a 20 e explode em confete
+$('#n20').textContent=0;!isAdm&&setTimeout(()=>{countUp($('#n20'),C.age);setTimeout(boom,950)},400);
 function tick(){const d=date-Date.now(),el=$('#cd');if(d<=0){el.innerHTML='<div class="card" style="grid-column:1/-1"><strong>🎉 É HOJE! 🎉</strong></div>';return}
  const v=[[d/864e5,'dias'],[d/36e5%24,'horas'],[d/6e4%60,'minutos'],[d/1e3%60,'segundos']];
  el.innerHTML=v.map(([n,l])=>`<div class="card"><strong>${String(Math.floor(n)).padStart(2,'0')}</strong>${l}</div>`).join('')}
