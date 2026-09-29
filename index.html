@@ -15,7 +15,7 @@ h1,h2,.big{font-family:Fraunces,serif;font-weight:600;line-height:1.05}
 h2{font-size:clamp(28px,6vw,40px);margin-bottom:16px}
 header{min-height:100svh;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:14px}
 h1{font-size:clamp(40px,11vw,80px)} h1 i{color:var(--mag);font-weight:700}
-.big{font-size:clamp(130px,42vw,260px);font-style:italic;background:linear-gradient(100deg,#ffc95c 20%,#fff7ee 40%,#ffc95c 60%,#ff3d8b);background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:sh 6s linear infinite;filter:drop-shadow(0 0 30px #ffc95c55)}
+.big{display:inline-block;padding:.04em .24em .12em .16em;font-size:clamp(130px,42vw,260px);font-style:italic;background:linear-gradient(100deg,#ffc95c 20%,#fff7ee 40%,#ffc95c 60%,#ff3d8b);background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:sh 6s linear infinite;filter:drop-shadow(0 0 30px #ffc95c55)}
 @keyframes sh{to{background-position:-250% 0}}
 .row{display:flex;flex-wrap:wrap;gap:12px;justify-content:center}
 .btn{font:700 15px 'DM Sans';letter-spacing:.06em;border:0;border-radius:99px;padding:16px 28px;min-height:52px;cursor:pointer;color:#160a2a;background:linear-gradient(90deg,var(--gold),#ffe29a);transition:transform .2s,box-shadow .2s;text-decoration:none;display:inline-flex;align-items:center}
@@ -41,12 +41,21 @@ footer{text-align:center;padding:50px 22px;color:#fff7eeb3}
 #cf{position:fixed;inset:0;pointer-events:none;z-index:99}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 
+#pr{position:fixed;top:0;left:0;height:4px;width:0;z-index:100;background:linear-gradient(90deg,var(--mag),var(--gold),var(--cy))}
+.rv{opacity:0;transform:translateY(30px);transition:opacity .8s,transform .8s}.rv.in{opacity:1;transform:none}
+section h2:after{content:"";display:block;width:64px;height:4px;border-radius:9px;margin-top:10px;background:linear-gradient(90deg,var(--mag),var(--gold))}
+.grid .card{transition:transform .3s,border-color .3s,box-shadow .3s}.grid .card:hover{transform:translateY(-6px) rotate(-.6deg);border-color:var(--gold);box-shadow:0 14px 40px #ff3d8b33}
+.mq{overflow:hidden;white-space:nowrap;border-block:1px solid var(--line);background:#ffffff0a;padding:14px 0;font:italic 600 22px Fraunces,serif;color:var(--gold)}
+.mq div{display:inline-block;animation:mq 30s linear infinite}@keyframes mq{to{transform:translateX(-50%)}}
+.fl{position:fixed;bottom:-60px;opacity:.45;pointer-events:none;z-index:-1;animation:up linear infinite}@keyframes up{to{transform:translateY(-118vh) rotate(360deg)}}
+.cd strong{background:linear-gradient(var(--gold),var(--mag));-webkit-background-clip:text;background-clip:text;color:transparent}
+header p:first-child{padding:6px 16px;border:1px solid var(--line);border-radius:99px;background:var(--glass)}
 body.am{background:#0f1220}body.am:before{display:none}
 #adm{--card:#181c30;--line:#2a3050;--ink:#e8ebf7;--mut:#8c93b5;--ok:#3ddc97;--warn:#ffc95c;--bad:#ff5d73;--acc:#ff3d8b;color:var(--ink);font:15px/1.5 system-ui,sans-serif}
 #adm *{box-sizing:border-box}#adm main{max-width:980px;margin:auto;padding:20px}
 #adm h1,#adm h2{font-family:system-ui,sans-serif;font-weight:700;line-height:1.3}#adm h1{font-size:22px}#adm h2{font-size:17px;margin:26px 0 10px}
 #adm .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;backdrop-filter:none}
-#adm .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}#adm .stats b{display:block;font-size:30px}#adm .stats span{color:var(--mut)}
+#adm .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}#adm .stats b{display:block;font-size:30px}#adm .stats span{color:var(--mut)}#adm .stats .card{border-top:3px solid var(--acc);transition:transform .2s}#adm .stats .card:hover{transform:translateY(-3px)}#adm button:hover{filter:brightness(1.25)}
 #adm input,#adm button,#adm select,#adm textarea{font:inherit;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:#0d1020;color:var(--ink);margin:0;width:auto}
 #adm button{cursor:pointer}#adm button.p{background:var(--acc);border-color:var(--acc);color:#fff}#adm button.ok{color:var(--ok)}#adm button.bad{color:var(--bad)}
 #adm .bar{display:flex;height:14px;border-radius:9px;overflow:hidden;margin:12px 0 6px;background:#0d1020}#adm .bar i{display:block;transition:width .6s}
@@ -56,7 +65,7 @@ body.am{background:#0f1220}body.am:before{display:none}
 #adm .tag{padding:2px 9px;border-radius:99px;font-size:12px;background:#0d1020}
 #adm #login{max-width:340px;margin:12vh auto}#adm #login input{width:100%;margin:6px 0}[hidden]{display:none!important}
 </style></head><body>
-<div id="pub">
+<div id="pub"><div id="pr"></div>
 <canvas id="cf" aria-hidden="true"></canvas>
 <header>
   <p>🎉 Você está convidado!</p>
@@ -66,17 +75,25 @@ body.am{background:#0f1220}body.am:before{display:none}
   <p><span data-loc>📍 Estância</span> &nbsp; <span data-day>📅 Dia 10</span></p>
   <div class="row"><a class="btn" href="#confirmar">CONFIRMAR PRESENÇA</a><a class="btn o" href="#info">VER INFORMAÇÕES</a></div>
 </header>
+<div class="mq" aria-hidden="true"><div id="mqi"></div></div>
 
 <section><div class="card"><h2>Queremos você e sua mulher com a gente</h2>
 <p>Capelasso & Anne estão completando 19 anos e querem comemorar ao lado de pessoas especiais. Vai ter música, comida, bebida, conversa e muita risada na Estância, no dia 10.</p>
 <p style="margin-top:12px"><b>Sua presença será muito importante para nós!</b></p></div></section>
+
+<section><h2>O que vai rolar</h2><div class="grid">
+<div class="card"><b>🎶 Música</b>Playlist boa para dançar a noite toda</div>
+<div class="card"><b>🍖 Comida</b>Muita coisa gostosa para todo mundo</div>
+<div class="card"><b>🍹 Bebida</b>Para brindar cada ano de história</div>
+<div class="card"><b>😂 Risada</b>Conversa boa e momentos inesquecíveis</div></div></section>
 
 <section id="info"><h2>Informações</h2><div class="grid">
 <div class="card"><b>🎂 Evento</b>Aniversário de Capelasso & Anne</div>
 <div class="card"><b>🎈 Idade</b>19 anos</div>
 <div class="card"><b>📅 Data</b><span id="dt">Dia 10</span></div>
 <div class="card"><b>📍 Local</b><span data-loc2>Estância</span></div>
-<div class="card"><b>👥 Convidados</b>Amigos e pessoas especiais</div></div></section>
+<div class="card"><b>👥 Convidados</b>Amigos e pessoas especiais</div></div>
+<div class="row" style="margin-top:20px"><button class="btn o" id="cal">📅 ADICIONAR AO CALENDÁRIO</button></div></section>
 
 <section><h2>Contagem regressiva</h2><div class="cd" id="cd" role="timer" aria-live="off"></div></section>
 
@@ -152,6 +169,14 @@ async function load(){const{data}=await sb.rpc('public_confirmed');if(!data)retu
  data.forEach(({name})=>{const li=document.createElement('li');li.textContent='✅ '+name;if(seen.size&&!seen.has(name))li.className='new';seen.add(name);ul.append(li)});
  countUp($('#count'),data.length);$('#ct').textContent=data.length===1?'pessoa já confirmou':'pessoas já confirmaram'}
 if(!isAdm){load();setInterval(load,20000)}
+if(!isAdm){const pr=$('#pr');addEventListener('scroll',()=>pr.style.width=scrollY/Math.max(1,document.documentElement.scrollHeight-innerHeight)*100+'%',{passive:true});
+ const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}}),{threshold:.1});
+ document.querySelectorAll('#pub section,.grid .card').forEach(e=>{e.classList.add('rv');io.observe(e)});
+ $('#mqi').innerHTML=Array(8).fill(C.age+' ANOS ✦ '+C.names.toUpperCase().replace(/&/g,'&amp;')+' ✦ '+C.place.toUpperCase()+' ✦ ').join('');
+ if(!RM)for(let i=0;i<16;i++){const f=document.createElement('span');f.className='fl';f.textContent=['🎈','✨','🎉','🎂','💜','⭐'][i%6];f.style.cssText='left:'+Math.random()*100+'%;animation-duration:'+(14+Math.random()*16)+'s;animation-delay:-'+Math.random()*20+'s;font-size:'+(18+Math.random()*22)+'px';document.body.append(f)}
+ $('#cal').onclick=()=>{const z=d=>d.toISOString().replace(/[-:]|\.\d+/g,''),e=new Date(date.getTime()+4*36e5),
+  t=['BEGIN:VCALENDAR','VERSION:2.0','BEGIN:VEVENT','DTSTART:'+z(date),'DTEND:'+z(e),'SUMMARY:Aniversário '+C.names+' — '+C.age+' anos','LOCATION:'+C.place,'END:VEVENT','END:VCALENDAR'].join('\r\n'),
+  a=document.createElement('a');a.href=URL.createObjectURL(new Blob([t],{type:'text/calendar'}));a.download='convite.ics';a.click()}}
 $('#sh').onclick=async()=>{const u=location.href.split('#')[0],t='🎉 Você está convidado para o aniversário do Capelasso & Anne!\nConfira os detalhes e confirme sua presença:';
  try{if(navigator.share)await navigator.share({title:'Convite',text:t,url:u});else{await navigator.clipboard.writeText(t+'\n'+u);$('#sh').textContent='✅ LINK COPIADO'}}catch(_){}};
 
