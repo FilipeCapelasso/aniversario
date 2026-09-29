@@ -1,6 +1,6 @@
 <!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Capelasso & Anne — 20 anos</title>
-<meta name="theme-color" content="#160a2a"><link rel="icon" href="data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27><text y=%27.9em%27 font-size=%2790%27>🎉</text></svg>">
+<meta name="description" content="Convite de aniversário de 20 anos de Capelasso & Anne. Confirme sua presença."><meta name="theme-color" content="#160a2a"><link rel="icon" href="data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27><text y=%27.9em%27 font-size=%2790%27>🎉</text></svg>">
 <meta property="og:title" content="Você está convidado! Capelasso & Anne — 20 anos"><meta property="og:description" content="Estância · Dia 10. Confirme sua presença.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;1,9..144,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
@@ -184,7 +184,7 @@ tick();setInterval(tick,1000);
 const msg=t=>$('#msg').textContent=t,dg=$('#dg'),seen=new Set();
 $('#f').onsubmit=async e=>{e.preventDefault();msg('');const n=$('#nm').value.replace(/\s+/g,' ').trim(),b=e.target.querySelector('button');
  if(n.length<3||/[<>]/.test(n))return msg('Digite seu nome completo.');
- b.disabled=true;const{data,error}=await sb.rpc('confirm_attendance',{p_name:n});b.disabled=false;
+ b.disabled=true;b.textContent='ENVIANDO…';const{data,error}=await sb.rpc('confirm_attendance',{p_name:n});b.disabled=false;b.textContent='CONFIRMAR PRESENÇA';
  if(error)return msg(/rate/.test(error.message)?'Muitas tentativas. Aguarde alguns minutos e tente de novo.':'Não foi possível enviar agora. Tente novamente.');
  if(!data||!data.ok)return msg('Não foi possível enviar. Confira seu nome e tente novamente.');
  const w=date.toLocaleString('pt-BR',{weekday:'long',day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'}),f=n.split(' ')[0];
@@ -199,7 +199,7 @@ async function load(){if(busy){again=true;return}busy=true;
   nodes.forEach((li,n)=>{if(!keep.has(n)){li.remove();nodes.delete(n)}});
   names.forEach((n,i)=>{let li=nodes.get(n);if(!li){li=document.createElement('li');li.textContent='✅ '+n;if(!first)li.className='new';nodes.set(n,li)}
    if(ul.children[i]!==li)ul.insertBefore(li,ul.children[i]||null)});
-  first=false;countUp($('#count'),data.length);$('#ct').textContent=data.length===1?'pessoa já confirmou':'pessoas já confirmaram'}
+  first=false;countUp($('#count'),data.length);$('#ct').textContent=data.length===0?'Seja o primeiro a confirmar 🎉':data.length===1?'pessoa já confirmou':'pessoas já confirmaram'}
  finally{busy=false;if(again){again=false;load()}}}
 if(!isAdm){load();
  sb.channel('confirmed').on('broadcast',{event:'changed'},()=>load()).subscribe();
@@ -231,7 +231,7 @@ $('#out').onclick=async()=>{await sb.auth.signOut();location.reload()};
 const st=g=>[].concat(g.attendance)[0]?.status||'none';
 async function load(){
  const[{data:g},{data:l},{data:s}]=await Promise.all([sb.from('guests').select('id,name,note,attendance(status,confirmed_at)').order('name'),sb.from('audit_log').select('*').order('id',{ascending:false}).limit(15),sb.from('event_settings').select('*').single()]);
- G=g||[];const n=k=>G.filter(x=>st(x)===k).length,T=G.length;
+ G=g||[];const n=k=>G.filter(x=>st(x)===k).length,T=G.length;document.title=(n('pending')?'('+n('pending')+') ':'')+'Painel do evento';
  $('#st').innerHTML=[['Convidados cadastrados',T],['Confirmações pendentes',n('pending')],['Presenças aprovadas',n('approved')],['Presenças recusadas',n('rejected')],['Ainda não confirmaram',n('none')]].map(([a,b])=>`<div class="card"><b>${b}</b><span>${a}</span></div>`).join('');
  const C={approved:'var(--ok)',pending:'var(--warn)',rejected:'var(--bad)',none:'#39406a'};
  $('#bar').innerHTML=Object.keys(C).map(k=>`<i style="width:${T?n(k)/T*100:0}%;background:${C[k]}"></i>`).join('');
@@ -258,6 +258,6 @@ $('#imp').onsubmit=async e=>{e.preventDefault();const b=e.target.querySelector('
  for(const name of names){const{error}=await sb.from('guests').insert({name});if(!error)ok++}
  b.disabled=false;e.target.reset();alert(ok+' adicionado(s)'+(names.length-ok?', '+(names.length-ok)+' ignorado(s) (já existiam ou inválidos).':'.'));load()};
 $('#ev').onsubmit=async e=>{e.preventDefault();const{error}=await sb.from('event_settings').update({event_title:$('#et').value,location:$('#el').value,event_date:new Date($('#ed').value).toISOString()}).eq('id',1);alert(error?error.message:'Evento salvo.')};
-$('#q').oninput=draw;$('#fl').onchange=draw;setInterval(()=>!$('#app').hidden&&load(),30000);if(isAdm)boot();
+$('#q').oninput=draw;$('#fl').onchange=draw;setInterval(()=>!$('#app').hidden&&load(),30000);if(isAdm){sb.channel('confirmed').on('broadcast',{event:'changed'},()=>{if(!$('#app').hidden)load()}).subscribe();boot()}
 })();
 </script></body></html>
