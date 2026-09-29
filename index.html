@@ -87,7 +87,7 @@ body.am{background:#0f1220}body.am:before{display:none}
 <section><h2>Quem já confirmou</h2><div class="card" style="text-align:center"><div id="count">0</div><p id="ct">pessoas já confirmaram</p></div><ul id="ls" aria-live="polite"></ul></section>
 
 <section style="text-align:center"><button class="btn" id="sh">📲 COMPARTILHAR CONVITE</button></section>
-<footer><p>Feito com carinho para celebrar mais um ano de histórias, amizade e momentos inesquecíveis. ❤️</p><p style="margin-top:8px"><b>Capelasso & Anne — 19 anos 🎂</b></p></footer>
+<footer><p>Feito com carinho para celebrar mais um ano de histórias, amizade e momentos inesquecíveis. ❤️</p><p style="margin-top:8px"><b>Capelasso & Anne — 19 anos 🎂</b></p><p style="margin-top:16px"><a href="#/admin" style="color:inherit;opacity:.35;text-decoration:none;font-size:12px">Área administrativa</a></p></footer>
 <dialog id="dg"></dialog>
 
 </div>
@@ -104,7 +104,16 @@ body.am{background:#0f1220}body.am:before{display:none}
 <h2>Evento</h2><form id="ev" class="card row"><input id="et" placeholder="Título"><input id="ed" type="datetime-local"><input id="el" placeholder="Local"><button class="p">Salvar</button></form>
 <h2>Histórico de ações</h2><div class="card" id="lg"></div></div></main>
 </div>
-<script>
+<script type="module">
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm";
+
+/* =========================================================
+   CAPELASSO & ANNE — CONVITE COMPLETO
+   Tudo do site em um único index.html.
+   O Telegram NÃO fica aqui: o token deve permanecer no
+   Supabase Edge Function por segurança.
+   ========================================================= */
+
 // Único lugar para editar o que é do convite (a data/local também podem ser mudados em Admin > Evento)
 window.CFG = {
   SUPABASE_URL: "https://mkzkasgaxzpynrhrgmrt.supabase.co",
@@ -112,13 +121,11 @@ window.CFG = {
   names: "Capelasso & Anne", age: 19, place: "Estância", dayLabel: "Dia 10",
   eventDate: "2026-10-10T20:00:00-05:00"
 };
-</script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script>
-const isAdm=/^\/admin\/?$/.test(location.pathname)||location.hash==='#/admin';
+
+const isAdm=location.hash==='#/admin';
 if(isAdm){document.body.classList.add('am');document.getElementById('pub').hidden=true;document.getElementById('adm').hidden=false;document.title='Painel do evento'}
 addEventListener('hashchange',()=>location.reload());
-const C=CFG,$=s=>document.querySelector(s),sb=supabase.createClient(C.SUPABASE_URL,C.SUPABASE_ANON_KEY),RM=matchMedia('(prefers-reduced-motion:reduce)').matches;
+const C=CFG,$=s=>document.querySelector(s),sb=createClient(C.SUPABASE_URL,C.SUPABASE_ANON_KEY),RM=matchMedia('(prefers-reduced-motion:reduce)').matches;
 let date=new Date(C.eventDate);
 if(!isAdm)document.title=CFG.names+' — '+CFG.age+' anos';
 sb.from('event_settings').select('*').single().then(({data:d})=>{if(!d)return;date=new Date(d.event_date);
@@ -153,8 +160,6 @@ if(!isAdm){load();setInterval(load,20000)}
 $('#sh').onclick=async()=>{const u=location.href.split('#')[0],t='🎉 Você está convidado para o aniversário do Capelasso & Anne!\nConfira os detalhes e confirme sua presença:';
  try{if(navigator.share)await navigator.share({title:'Convite',text:t,url:u});else{await navigator.clipboard.writeText(t+'\n'+u);$('#sh').textContent='✅ LINK COPIADO'}}catch(_){}};
 
-</script>
-<script>
 (()=>{
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const LB={none:'Não confirmou',pending:'⏳ Pendente',approved:'✅ Aprovado',rejected:'❌ Recusado'};let G=[];
@@ -193,4 +198,4 @@ $('#add').onsubmit=async e=>{e.preventDefault();const{error}=await sb.from('gues
 $('#ev').onsubmit=async e=>{e.preventDefault();const{error}=await sb.from('event_settings').update({event_title:$('#et').value,location:$('#el').value,event_date:new Date($('#ed').value).toISOString()}).eq('id',1);alert(error?error.message:'Evento salvo.')};
 $('#q').oninput=draw;$('#fl').onchange=draw;setInterval(()=>!$('#app').hidden&&load(),30000);if(isAdm)boot();
 })();
-</script></body></html>
+</script><noscript>Este convite precisa de JavaScript ativado para confirmar presença.</noscript></body></html>
