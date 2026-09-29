@@ -18,7 +18,15 @@ insert into private_config values
   ('project_url','https://mkzkasgaxzpynrhrgmrt.supabase.co'),
   ('anon_key','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1remthc2dheHpweW5yaHJnbXJ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA2NDQxNDYsImV4cCI6MjEwNjIyMDE0Nn0.Aax_OwDl4HZHMbN0LAqmGQvd9OqA_simRLWxBmINJCk'),
   ('tg_token','8843893448:AAHPMlalG3TFdEX_zaE8Znop_TJsRzTjrhQ'),
-  ('tg_admins','7694564020')            -- vários admins: '111,222'
+  ('tg_admins','7694564020'),           -- vários admins: '111,222'
+  -- WhatsApp AUTOMÁTICO (opcional). Deixe wa_url vazio para desligar: aí o bot mostra o botão "📲 Enviar no WhatsApp".
+  -- Z-API:      url 'https://api.z-api.io/instances/ID/token/TOKEN/send-text'  headers '{"Client-Token":"SEU_CLIENT_TOKEN"}'  body '{"phone":"{{phone}}","message":"{{message}}"}'
+  -- Evolution:  url 'https://SEU-SERVIDOR/message/sendText/INSTANCIA'          headers '{"apikey":"SUA_APIKEY"}'              body '{"number":"{{phone}}","text":"{{message}}"}'
+  ('wa_url',''),
+  ('wa_headers','{}'),
+  ('wa_body','{"phone":"{{phone}}","message":"{{message}}"}'),
+  -- Mensagem enviada a cada pessoa aprovada. Variáveis: {{nome}} {{nome_completo}} {{evento}} {{data}} {{local}}
+  ('msg_template', E'Olá, {{nome}}! 🎉\n\nSua presença no *{{evento}}* está CONFIRMADA! ✅\n\n📅 {{data}}\n📍 {{local}}\n\nEstamos te esperando com muito carinho. Até lá! 💜')
 on conflict (key) do update set value=excluded.value;
 insert into private_config values ('tg_secret', replace(gen_random_uuid()::text,'-','')||replace(gen_random_uuid()::text,'-',''))
 on conflict (key) do nothing;
@@ -38,7 +46,8 @@ create table if not exists attendance(
   approved_at timestamptz, rejected_at timestamptz,
   approved_by text, rejected_by text,
   created_at timestamptz not null default now());
-alter table attendance add column if not exists approved_by text, add column if not exists rejected_by text;
+alter table attendance add column if not exists approved_by text, add column if not exists rejected_by text, add column if not exists msg_sent_at timestamptz;
+alter table guests add column if not exists phone text;
 create table if not exists admin_users(user_id uuid primary key references auth.users(id) on delete cascade);
 create table if not exists event_settings(
   id int primary key default 1 check (id=1),
@@ -52,10 +61,26 @@ create index if not exists rate_limits_idx on rate_limits(key, at);
 -- ---------- 2. FUNÇÕES BÁSICAS ----------
 create or replace function norm(t text) returns text language sql immutable as
 $$ select regexp_replace(lower(extensions.unaccent(trim(t))),'\s+',' ','g') $$;
-create or replace function set_norm() returns trigger language plpgsql as
-$$ begin new.normalized_name:=norm(new.name); return new; end $$;
+-- celular: só dígitos, com 55 na frente (aceita 10/11 dígitos ou já com 55)
+create or replace function norm_phone(t text) returns text language sql immutable as $$
+  select case when d ~ '^55\d{10,11}$' then d when d ~ '^\d{10,11}$' then '55'||d else null end
+  from (select regexp_replace(coalesce(t,''),'\D','','g') d) x $$;
+create or replace function fmt_phone(p text) returns text language sql immutable as $$
+  select case when p is null then null
+    when length(p)=13 then '+55 ('||substr(p,3,2)||') '||substr(p,5,5)||'-'||substr(p,10)
+    when length(p)=12 then '+55 ('||substr(p,3,2)||') '||substr(p,5,4)||'-'||substr(p,9) else p end $$;
+create or replace function set_norm() returns trigger language plpgsql as $$
+begin
+  new.normalized_name:=norm(new.name);
+  new.phone:=nullif(trim(coalesce(new.phone,'')),'');
+  if new.phone is not null then
+    new.phone:=norm_phone(new.phone);
+    if new.phone is null then raise exception 'telefone_invalido'; end if;
+  end if;
+  return new;
+end $$;
 drop trigger if exists t_norm on guests;
-create trigger t_norm before insert or update of name on guests for each row execute function set_norm();
+create trigger t_norm before insert or update of name, phone on guests for each row execute function set_norm();
 
 create or replace function is_admin() returns boolean language sql security definer set search_path=public stable as
 $$ select exists(select 1 from admin_users where user_id=auth.uid()) $$;
@@ -116,13 +141,26 @@ begin
   select * into g from guests where normalized_name=norm(v);
   if not found or not g.is_active then return '{"ok":true,"already":true}'; end if;
   insert into attendance(guest_id) values (g.id) on conflict (guest_id) do nothing returning id into v_new;
-  return jsonb_build_object('ok',true,'already',v_new is null);
+  return jsonb_build_object('ok',true,'already',v_new is null,'token',v_new);  -- token só existe para quem acabou de confirmar
+end $$;
+
+-- A pessoa cadastra o próprio celular usando o token recebido ao confirmar (ninguém consegue mexer no celular de outro)
+create or replace function save_phone(p_token uuid, p_phone text) returns jsonb language plpgsql security definer set search_path=public as $$
+declare g guests; np text:=norm_phone(p_phone);
+begin
+  perform rl();
+  if np is null then return '{"ok":false,"error":"invalid"}'; end if;
+  select gg.* into g from attendance a join guests gg on gg.id=a.guest_id where a.id=p_token;
+  if not found then return '{"ok":false}'; end if;
+  update guests set phone=np where id=g.id;
+  perform tg_admins_msg('📱 <b>'||tg_esc(g.name)||'</b> adicionou o celular '||fmt_phone(np));
+  return '{"ok":true}';
 end $$;
 
 create or replace function public_confirmed() returns table(name text) language sql security definer set search_path=public as
 $$ select g.name from attendance a join guests g on g.id=a.guest_id where a.status='approved' order by a.approved_at nulls last $$;
 
-grant execute on function confirm_attendance(text), public_confirmed() to anon, authenticated;
+grant execute on function confirm_attendance(text), save_phone(uuid,text), public_confirmed() to anon, authenticated;
 
 -- ---------- 6. BOT DO TELEGRAM (tudo dentro do banco, sem Edge Function) ----------
 create or replace function tg_cfg(k text) returns text language sql stable security definer set search_path=public as
@@ -146,21 +184,134 @@ create or replace function tg_kb(p_id uuid) returns jsonb language sql immutable
     jsonb_build_object('text','❌ NEGAR','callback_data','r:'||p_id::text)))) $$;
 
 create or replace function tg_card(p_id uuid) returns text language plpgsql security definer set search_path=public as $$
-declare a attendance; e event_settings; n text;
+declare a attendance; e event_settings; n text; g guests; ph text;
 begin
   select * into a from attendance where id=p_id;
   if not found then return '🗑️ Essa confirmação foi removida.'; end if;
-  select tg_esc(name) into n from guests where id=a.guest_id;
+  select * into g from guests where id=a.guest_id;
+  n:=tg_esc(g.name);
   if a.status='approved' then
-    return format(E'✅ <b>PRESENÇA APROVADA</b>\n\n👤 %s\n\nO nome já aparece na lista pública do site.\n\n<i>Por %s</i>', n, tg_esc(coalesce(a.approved_by,'admin')));
+    ph:=case when g.phone is null then E'⚠️ Sem celular cadastrado. Toque em ➕ abaixo para adicionar.'
+             when a.msg_sent_at is not null then '📲 Mensagem de confirmação enviada para '||fmt_phone(g.phone)
+             else '📱 '||fmt_phone(g.phone)||E'\nToque no botão abaixo para enviar a confirmação pelo WhatsApp.' end;
+    return format(E'✅ <b>PRESENÇA APROVADA</b>\n\n👤 %s\n\nO nome já aparece na lista pública do site.\n\n%s\n\n<i>Por %s</i>', n, ph, tg_esc(coalesce(a.approved_by,'admin')));
   elsif a.status='rejected' then
     return format(E'❌ <b>PRESENÇA NEGADA</b>\n\n👤 %s\n\nEssa confirmação não será exibida publicamente.\n\n<i>Por %s</i>', n, tg_esc(coalesce(a.rejected_by,'admin')));
   end if;
   select * into e from event_settings where id=1;
-  return format(E'🎉 <b>NOVA CONFIRMAÇÃO DE PRESENÇA</b>\n\n👤 <b>Nome:</b>\n%s\n\n🎂 <b>Evento:</b>\n%s\n\n📍 <b>Local:</b>\n%s\n\n📅 <b>Data:</b>\n%s\n\n🕒 <b>Confirmado no site:</b>\n%s\n\n⚠️ <b>Status:</b>\nAGUARDANDO APROVAÇÃO',
-    n, tg_esc(e.event_title), tg_esc(e.location),
+  return format(E'🎉 <b>NOVA CONFIRMAÇÃO DE PRESENÇA</b>\n\n👤 <b>Nome:</b>\n%s\n\n📱 <b>Celular:</b>\n%s\n\n🎂 <b>Evento:</b>\n%s\n\n📍 <b>Local:</b>\n%s\n\n📅 <b>Data:</b>\n%s\n\n🕒 <b>Confirmado no site:</b>\n%s\n\n⚠️ <b>Status:</b>\nAGUARDANDO APROVAÇÃO',
+    n, coalesce(fmt_phone(g.phone),'não informado'), tg_esc(e.event_title), tg_esc(e.location),
     to_char(e.event_date at time zone 'America/Rio_Branco','DD/MM/YYYY "às" HH24:MI'),
     to_char(a.confirmed_at at time zone 'America/Rio_Branco','DD/MM/YYYY "às" HH24:MI'));
+end $$;
+
+-- ===== Mensagem individual + envio (WhatsApp automático ou link wa.me) =====
+create or replace function url_enc(t text) returns text language sql immutable as $$
+  select coalesce(string_agg(case when c ~ '^[A-Za-z0-9_.~-]$' then c
+    else (select string_agg('%'||upper(lpad(to_hex(get_byte(convert_to(c,'UTF8'),i)),2,'0')),'') from generate_series(0,octet_length(convert_to(c,'UTF8'))-1) i) end, '' order by o),'')
+  from regexp_split_to_table(t,'') with ordinality as x(c,o) $$;
+
+create or replace function render_msg(p_gid uuid) returns text language sql stable security definer set search_path=public as $$
+  select replace(replace(replace(replace(replace(tg_cfg('msg_template'),
+    '{{nome}}',initcap(split_part(g.name,' ',1))),'{{nome_completo}}',g.name),
+    '{{evento}}',coalesce(e.event_title,'')),
+    '{{data}}',coalesce(to_char(e.event_date at time zone 'America/Rio_Branco','DD/MM/YYYY "às" HH24:MI'),'')),
+    '{{local}}',coalesce(e.location,''))
+  from guests g, event_settings e where g.id=p_gid $$;
+
+create or replace function wa_link(p_gid uuid) returns text language sql stable security definer set search_path=public as $$
+  select case when g.phone is null then null else 'https://wa.me/'||g.phone||'?text='||url_enc(render_msg(g.id)) end from guests g where g.id=p_gid $$;
+
+create or replace function tg_admins_msg(p_text text) returns void language plpgsql security definer set search_path=public,extensions as $$
+declare c text;
+begin
+  for c in select trim(x) from unnest(string_to_array(tg_cfg('tg_admins'),',')) x where trim(x)<>'' loop
+    perform tg_call('sendMessage', jsonb_build_object('chat_id',c::bigint,'text',p_text,'parse_mode','HTML'));
+  end loop;
+exception when others then null;
+end $$;
+
+-- dispara pelo provedor configurado (false = provedor desligado)
+create or replace function wa_send(p_phone text, p_msg text) returns boolean language plpgsql security definer set search_path=public,extensions as $$
+declare u text:=coalesce(tg_cfg('wa_url'),''); j text:=to_json(p_msg)::text;
+begin
+  if u='' then return false; end if;
+  perform net.http_post(url:=replace(u,'{{phone}}',p_phone),
+    body:=replace(replace(tg_cfg('wa_body'),'{{phone}}',p_phone),'{{message}}',substr(j,2,length(j)-2))::jsonb,
+    headers:=coalesce(nullif(tg_cfg('wa_headers'),''),'{}')::jsonb || '{"Content-Type":"application/json"}'::jsonb);
+  return true;
+end $$;
+
+create or replace function try_send_confirmation(p_att uuid, p_force boolean default false) returns text language plpgsql security definer set search_path=public,extensions as $$
+declare a attendance; g guests;
+begin
+  select * into a from attendance where id=p_att;
+  if not found or a.status<>'approved' then return 'not_approved'; end if;
+  if a.msg_sent_at is not null and not p_force then return 'already'; end if;
+  select * into g from guests where id=a.guest_id;
+  if g.phone is null then return 'no_phone'; end if;
+  if not wa_send(g.phone, render_msg(g.id)) then return 'no_provider'; end if;
+  update attendance set msg_sent_at=now() where id=a.id;
+  return 'sent';
+exception when others then return 'error';
+end $$;
+
+-- ao aprovar: envia a mensagem (se tiver celular e provedor)
+create or replace function trg_send() returns trigger language plpgsql security definer set search_path=public,extensions as $$
+begin perform try_send_confirmation(new.id); return null; exception when others then return null; end $$;
+drop trigger if exists t_send on attendance;
+create trigger t_send after update of status on attendance for each row
+  when (new.status='approved' and old.status is distinct from 'approved') execute function trg_send();
+
+-- celular cadastrado depois da aprovação: envia na hora
+create or replace function trg_send2() returns trigger language plpgsql security definer set search_path=public,extensions as $$
+declare aid uuid;
+begin
+  select id into aid from attendance where guest_id=new.id and status='approved';
+  if found and try_send_confirmation(aid)='sent' then
+    perform tg_admins_msg('📲 Mensagem de confirmação enviada para <b>'||tg_esc(new.name)||'</b> ('||fmt_phone(new.phone)||')');
+  end if;
+  return null;
+exception when others then return null;
+end $$;
+drop trigger if exists t_send2 on guests;
+create trigger t_send2 after update of phone on guests for each row
+  when (new.phone is not null and old.phone is distinct from new.phone) execute function trg_send2();
+
+-- botão "Enviar msg" do painel (só admin): tenta pelo provedor e devolve o link do WhatsApp
+create or replace function admin_send_confirmation(p_guest uuid) returns jsonb language plpgsql security definer set search_path=public as $$
+declare aid uuid; r text; ph text;
+begin
+  if not is_admin() then raise exception 'forbidden'; end if;
+  select a.id, g.phone into aid, ph from attendance a join guests g on g.id=a.guest_id where g.id=p_guest and a.status='approved';
+  if not found then return jsonb_build_object('result','not_approved'); end if;
+  r:=try_send_confirmation(aid,true);
+  return jsonb_build_object('result',r,'link',case when ph is not null then wa_link(p_guest) end);
+end $$;
+
+-- botões abaixo do card aprovado: link do WhatsApp ou "adicionar celular"
+create or replace function tg_kb_after(p_att uuid) returns jsonb language plpgsql security definer set search_path=public as $$
+declare a attendance; g guests;
+begin
+  select * into a from attendance where id=p_att;
+  if not found or a.status<>'approved' then return '{"inline_keyboard":[]}'::jsonb; end if;
+  select * into g from guests where id=a.guest_id;
+  if g.phone is null then
+    return jsonb_build_object('inline_keyboard',jsonb_build_array(jsonb_build_array(jsonb_build_object('text','➕ Adicionar celular','callback_data','p:'||g.id::text))));
+  end if;
+  return jsonb_build_object('inline_keyboard',jsonb_build_array(jsonb_build_array(jsonb_build_object('text','📲 Enviar no WhatsApp','url',wa_link(g.id)))));
+end $$;
+
+-- /telefones: lista de convidados (sem celular primeiro)
+create or replace function tg_phones() returns jsonb language plpgsql security definer set search_path=public as $$
+declare k jsonb; n int; sem int;
+begin
+  select count(*), count(*) filter (where phone is null) into n, sem from guests where is_active;
+  select coalesce(jsonb_agg(jsonb_build_array(jsonb_build_object('text',case when phone is null then '➕ ' else '✅ ' end||left(name,34),'callback_data','p:'||id::text)) order by (phone is not null), name),'[]'::jsonb)
+    into k from (select id,name,phone from guests where is_active order by (phone is not null), name limit 90) x;
+  return jsonb_build_object('reply_markup',jsonb_build_object('inline_keyboard',k),
+    'text', case when n=0 then '📭 Nenhum convidado cadastrado.'
+      else E'📱 <b>CELULARES</b>\n\nToque em um nome para cadastrar ou trocar o celular.\n➕ sem celular ('||sem||') · ✅ com celular ('||(n-sem)||')'||case when n>90 then E'\n(mostrando 90; use o painel para os demais)' else '' end end);
 end $$;
 
 -- Lista de confirmados com um botão 🗑️ por nome (usada pelo /remover; até 90 mais recentes)
@@ -196,7 +347,7 @@ create or replace function tg_webhook(json) returns json language plpgsql securi
 declare
   p jsonb:=$1::jsonb; cb jsonb:=p->'callback_query'; msg jsonb:=p->'message';
   h json:=coalesce(nullif(current_setting('request.headers',true),''),'{}')::json;
-  uid text; m text[]; approve boolean; v_by text; a attendance; ans text; cid bigint; gid uuid; gname text; lst jsonb;
+  uid text; m text[]; approve boolean; v_by text; a attendance; ans text; cid bigint; gid uuid; gname text; lst jsonb; wid text; np text;
 begin
   if (h->>'x-telegram-bot-api-secret-token') is distinct from tg_cfg('tg_secret') then return '{}'::json; end if;
 
@@ -218,15 +369,61 @@ begin
     return '{}'::json;
   end if;
 
+  if msg is not null and coalesce(msg->>'text','') ~ '^/(telefones|numeros)' then
+    uid:=msg->'from'->>'id';
+    if tg_is_admin(uid) then
+      lst:=tg_phones();
+      perform tg_call('sendMessage', jsonb_build_object('chat_id',(msg->'chat'->>'id')::bigint,'text',lst->>'text','parse_mode','HTML','reply_markup',lst->'reply_markup'));
+    else
+      perform tg_call('sendMessage', jsonb_build_object('chat_id',(msg->'chat'->>'id')::bigint,'text','⛔ Você não tem permissão.'));
+    end if;
+    return '{}'::json;
+  end if;
+
+  -- admin respondendo com o número depois de tocar em um nome (/telefones)
+  if msg is not null and coalesce(msg->>'text','') <> '' and tg_is_admin(msg->'from'->>'id') then
+    uid:=msg->'from'->>'id'; cid:=(msg->'chat'->>'id')::bigint;
+    if msg->>'text' like '/cancelar%' then
+      delete from private_config where key='wait:'||uid;
+      perform tg_call('sendMessage', jsonb_build_object('chat_id',cid,'text','Cancelado.'));
+      return '{}'::json;
+    end if;
+    select value into wid from private_config where key='wait:'||uid;
+    if found and msg->>'text' not like '/%' then
+      np:=norm_phone(msg->>'text');
+      if np is null then
+        perform tg_call('sendMessage', jsonb_build_object('chat_id',cid,'text','❌ Número inválido. Envie com DDD, ex: 68999998888 (ou /cancelar).'));
+      else
+        update guests set phone=np where id=wid::uuid returning name into gname;
+        delete from private_config where key='wait:'||uid;
+        perform tg_call('sendMessage', jsonb_build_object('chat_id',cid,'parse_mode','HTML','text',
+          case when gname is null then 'Esse convidado não existe mais.' else '✅ Celular de <b>'||tg_esc(gname)||'</b> salvo: '||fmt_phone(np) end));
+      end if;
+      return '{}'::json;
+    end if;
+  end if;
+
   if cb is null then return '{}'::json; end if;
   uid:=cb->'from'->>'id';
   if not tg_is_admin(uid) then
     perform tg_call('answerCallbackQuery', jsonb_build_object('callback_query_id',cb->>'id','text','Você não tem permissão.'));
     return '{}'::json;
   end if;
-  m:=regexp_match(coalesce(cb->>'data',''),'^([ard]):([0-9a-f-]{36})$');
+  m:=regexp_match(coalesce(cb->>'data',''),'^([ardp]):([0-9a-f-]{36})$');
   if m is null then
     perform tg_call('answerCallbackQuery', jsonb_build_object('callback_query_id',cb->>'id','text','Ação inválida.'));
+    return '{}'::json;
+  end if;
+
+  if m[1]='p' then   -- cadastrar celular: pede o número no chat
+    select name into gname from guests where id=m[2]::uuid;
+    if not found then
+      perform tg_call('answerCallbackQuery', jsonb_build_object('callback_query_id',cb->>'id','text','Convidado não existe mais.'));
+    else
+      insert into private_config values ('wait:'||uid, m[2]) on conflict (key) do update set value=excluded.value;
+      perform tg_call('answerCallbackQuery', jsonb_build_object('callback_query_id',cb->>'id','text','Envie o número no chat'));
+      perform tg_call('sendMessage', jsonb_build_object('chat_id',uid::bigint,'parse_mode','HTML','text','📱 Envie agora o celular de <b>'||tg_esc(gname)||E'</b> (com DDD).\nEx: 68999998888\n\n/cancelar para sair'));
+    end if;
     return '{}'::json;
   end if;
 
@@ -263,7 +460,7 @@ begin
   if cb->'message' is not null then
     perform tg_call('editMessageText', jsonb_build_object(
       'chat_id',(cb->'message'->'chat'->>'id')::bigint,'message_id',(cb->'message'->>'message_id')::bigint,
-      'text',tg_card(m[2]::uuid),'parse_mode','HTML','reply_markup','{"inline_keyboard":[]}'::jsonb));
+      'text',tg_card(m[2]::uuid),'parse_mode','HTML','reply_markup',tg_kb_after(m[2]::uuid)));
   end if;
   return '{}'::json;
 exception when others then   -- o Telegram sempre recebe 200; se der erro, ele aparece no aviso do botão
@@ -275,9 +472,11 @@ exception when others then   -- o Telegram sempre recebe 200; se der erro, ele a
 end $$;
 
 -- funções internas: ninguém de fora (anon/authenticated) executa direto
-revoke all on function rl(), tg_cfg(text), tg_is_admin(text), tg_call(text,jsonb), tg_card(uuid), tg_list(), notify_telegram(), audit(), set_norm()
+revoke all on function rl(), tg_cfg(text), tg_is_admin(text), tg_call(text,jsonb), tg_card(uuid), tg_list(), tg_phones(), tg_kb_after(uuid), tg_admins_msg(text), wa_send(text,text), wa_link(uuid), render_msg(uuid), try_send_confirmation(uuid,boolean), trg_send(), trg_send2(), notify_telegram(), audit(), set_norm()
   from public, anon, authenticated;
 grant execute on function tg_webhook(json) to anon, authenticated;
+revoke all on function admin_send_confirmation(uuid) from public, anon;
+grant execute on function admin_send_confirmation(uuid) to authenticated;
 
 -- ---------- 7. LIGAR O BOT (registra o webhook e manda mensagem de teste) ----------
 do $$
@@ -292,6 +491,7 @@ begin
       'drop_pending_updates', true));
   perform tg_call('setMyCommands', jsonb_build_object('commands', jsonb_build_array(
     jsonb_build_object('command','remover','description','Remover alguém da lista de confirmados'),
+    jsonb_build_object('command','telefones','description','Cadastrar celular dos convidados'),
     jsonb_build_object('command','start','description','Ver meu ID e status de admin'))));
   perform tg_call('sendMessage', jsonb_build_object('chat_id',split_part(tg_cfg('tg_admins'),',',1)::bigint,
     'text','✅ Bot do convite conectado! As novas confirmações chegarão aqui com os botões CONFIRMAR / NEGAR. Use /remover para apagar alguém da lista.'));
@@ -300,7 +500,7 @@ end $$;
 -- ---------- 8. SEU ACESSO AO PAINEL /admin ----------
 -- Antes: Authentication > Users > Add user (e-mail + senha). Troque o e-mail abaixo e rode de novo.
 do $$
-declare v_email text:='SEU@EMAIL.COM';
+declare v_email text:='filipecapelasso1@gmail.com';
 begin
   insert into admin_users select id from auth.users where lower(email)=lower(v_email) on conflict do nothing;
   if not found then raise notice 'Nenhum admin novo inserido. Crie o usuário em Authentication > Users e ajuste o e-mail na seção 8.'; end if;
@@ -308,35 +508,3 @@ end $$;
 
 -- Convidados: use o painel /admin (tem "Importar lista"), ou:
 -- insert into guests(name) values ('João Silva'),('Maria Silva');
-
--- ATUALIZAÇÃO INSTANTÂNEA DA LISTA
--- Supabase > SQL Editor > New query > cole TUDO > Run. (Rode só uma vez; pode repetir sem problema.)
--- Não expõe nenhum dado: o banco só avisa "a lista mudou" e o site busca a lista pública sozinho.
-
-create or replace function notify_list_change() returns trigger language plpgsql security definer set search_path=public,extensions as $$
-begin
-  if tg_table_name='attendance' then
-    if (tg_op<>'INSERT' and old.status='approved') or (tg_op<>'DELETE' and new.status='approved') then
-      perform realtime.send(jsonb_build_object('at',now()),'changed','confirmed',false);
-    end if;
-  else
-    perform realtime.send(jsonb_build_object('at',now()),'changed','confirmed',false);
-  end if;
-  return null;
-exception when others then return null;
-end $$;
-
-drop trigger if exists t_live1 on attendance;
-create trigger t_live1 after insert or update or delete on attendance for each row execute function notify_list_change();
-drop trigger if exists t_live2 on guests;
-create trigger t_live2 after update of name on guests for each row execute function notify_list_change();
-
-revoke all on function notify_list_change() from public, anon, authenticated;
-
-update private_config
-set value = (select string_agg(distinct trim(x), ',')
-             from unnest(string_to_array(value || ',8410161765', ',')) x
-             where trim(x) <> '')
-where key = 'tg_admins';
-
-select value from private_config where key = 'tg_admins';
