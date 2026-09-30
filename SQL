@@ -26,7 +26,13 @@ insert into private_config values
   ('wa_headers','{}'),
   ('wa_body','{"phone":"{{phone}}","message":"{{message}}"}'),
   -- Mensagem enviada a cada pessoa aprovada. Variáveis: {{nome}} {{nome_completo}} {{evento}} {{data}} {{local}}
-  ('msg_template', E'Olá, {{nome}}! 🎉\n\nSua presença no *{{evento}}* está CONFIRMADA! ✅\n\n📅 {{data}}\n📍 {{local}}\n\nEstamos te esperando com muito carinho. Até lá! 💜')
+  ('msg_template', E'Opa, {{nome}}! Tudo bem?
+Só passando para confirmar uma coisinha: você vai conseguir ir ao aniversário de Capelasso & Anne?
+Sua presença seria muito especial para a gente, e esperamos muito te ver por lá!
+Detalhes do evento:
+{{data}}
+{{local}}
+Vai ser muito bom comemorar esse momento com você. Até lá!')
 on conflict (key) do update set value=excluded.value;
 insert into private_config values ('tg_secret', replace(gen_random_uuid()::text,'-','')||replace(gen_random_uuid()::text,'-',''))
 on conflict (key) do nothing;
