@@ -105,7 +105,8 @@ header>.row{animation:fu .9s var(--e) 1.6s both}
 .btn:not(.o){position:relative;overflow:hidden}
 .btn:not(.o):after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(105deg,transparent 30%,#ffffffb0 50%,transparent 70%);transform:translateX(-130%);animation:shn 4s 2.4s infinite}
 @keyframes shn{45%,100%{transform:translateX(130%)}}
-.btn:disabled{opacity:.7;cursor:wait}
+.btn:disabled{opacity:.7;cursor:default}
+dialog::backdrop{backdrop-filter:none;background:#000c}
 #pub input:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 4px #ffc95c22}
 #nv a{position:relative;transition:color .25s}#nv a.on{color:var(--gold)}
 #nv a:after{content:"";position:absolute;left:0;right:0;bottom:-4px;height:2px;border-radius:2px;background:var(--gold);transform:scaleX(0);transition:transform .35s var(--e)}#nv a.on:after{transform:scaleX(1)}
@@ -226,10 +227,10 @@ $('#f').onsubmit=async e=>{e.preventDefault();msg('');const n=$('#nm').value.rep
  dg.innerHTML='<div style="font-size:56px">🎉</div><h2 id="dh"></h2><p id="dp"></p><p style="margin-top:12px"><b>📅 <span id="dw"></span></b><br><b>📍 <span id="dl"></span></b></p><p style="margin-top:12px;font-size:.92em;opacity:.85">💌 Lembrete: guarde a data, chame quem você ama e venha com energia para dançar e celebrar!</p>'+(tk?'<div style="margin-top:16px;text-align:left;padding:14px;border:1px solid var(--line);border-radius:16px;background:#ffffff0d"><p style="font-size:.95em"><b>📱 Qual é o seu celular?</b> Vamos te lembrar do aniversário e confirmar sua presença no restaurante.</p><input id="pn" type="tel" inputmode="tel" autocomplete="tel" maxlength="20" placeholder="(68) 99999-9999" style="width:100%;margin:8px 0"><button class="btn" id="ps" style="width:100%;justify-content:center">SALVAR CELULAR</button><p id="pm" style="min-height:1.3em;font-size:.9em;margin-top:8px"></p></div>':'<p style="margin-top:14px;font-size:.9em;opacity:.8">📱 Precisa informar ou trocar o celular? Fale com os anfitriões.</p>')+'<div class="row"><button class="btn o" id="dc">📅 SALVAR NA AGENDA</button><button class="btn" id="dx">FECHAR</button></div>';
  $('#dh').textContent=data.already?'Já recebemos seu pedido!':'Obrigado, '+f.charAt(0).toUpperCase()+f.slice(1).toLowerCase()+'!';
  $('#dp').textContent=data.already?'Seu nome já está com a gente. Assim que os anfitriões aprovarem, ele aparece na lista de confirmados.':'Recebemos sua confirmação com muito carinho. Os anfitriões vão analisar e, assim que for aprovada, seu nome aparece na lista de confirmados aqui no site.';
- $('#dw').textContent=w;$('#dl').textContent=$('[data-loc2]').textContent;$('#dc').onclick=()=>$('#cal').click();$('#dx').onclick=()=>dg.close();
+ $('#dw').textContent=w;$('#dl').textContent=$('[data-loc2]').textContent;$('#dc').onclick=()=>$('#cal').click();$('#dx').onclick=()=>dg.close();dg.onclick=e=>{const r=dg.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)dg.close()};
  if(tk)$('#ps').onclick=async()=>{const pm=$('#pm');pm.textContent='';const{data:r,error:er}=await sb.rpc('save_phone',{p_token:tk,p_phone:$('#pn').value});
   if(er)pm.textContent='Não foi possível salvar agora. Tente de novo.';else if(!r||!r.ok)pm.textContent='Número inválido. Use DDD + número, ex: (68) 99999-9999.';
-  else{pm.textContent='✅ Celular salvo! Vamos te lembrar do aniversário e confirmar sua presença no restaurante.';$('#ps').disabled=true;try{localStorage.removeItem(nk)}catch(_){}}};
+  else{$('#ps').closest('div').innerHTML='<div style="text-align:center;animation:pop .6s var(--e)"><div style="font-size:34px">✅</div><p><b>Celular salvo!</b><br>Vamos te lembrar do aniversário e confirmar sua presença no restaurante.</p></div>';try{localStorage.removeItem(nk)}catch(_){}}};
  dg.showModal();boom();$('#f').reset()};
 async function load(){const{data}=await sb.rpc('public_confirmed');if(!data)return;const ul=$('#ls');ul.innerHTML='';
  const first=!seen.size;if(!data.length){const li=document.createElement('li');li.className='empty';li.textContent='Ninguém confirmou ainda. Seja a primeira pessoa da lista!';ul.append(li)}
@@ -254,8 +255,8 @@ $('#sh').onclick=async()=>{const u=location.href.split('#')[0],t='🎉 Você est
 if(!isAdm&&!RM){
  const sk=document.createElement('canvas'),gw=document.createElement('div'),x=sk.getContext('2d'),n19=$('#n19'),cols=['255,201,92','255,247,238','94,231,255','255,61,139'];let W,H,mx=-999,my=-999;
  sk.id='sk';gw.id='gw';document.body.prepend(sk,gw);const rs=()=>{W=sk.width=innerWidth;H=sk.height=innerHeight};rs();addEventListener('resize',rs);
- const P=Array.from({length:75},(_,i)=>({x:Math.random()*innerWidth,y:Math.random()*innerHeight,z:.25+Math.random()*.75,p:Math.random()*6,c:cols[i%4]}));
- (function f(t){x.clearRect(0,0,W,H);for(const s of P){s.y-=s.z*.3;if(s.y<-10){s.y=H+10;s.x=Math.random()*W}
+ const P=Array.from({length:innerWidth<700?32:75},(_,i)=>({x:Math.random()*innerWidth,y:Math.random()*innerHeight,z:.25+Math.random()*.75,p:Math.random()*6,c:cols[i%4]}));
+ (function f(t){if(dg.open||document.hidden){requestAnimationFrame(f);return}x.clearRect(0,0,W,H);for(const s of P){s.y-=s.z*.3;if(s.y<-10){s.y=H+10;s.x=Math.random()*W}
   const dx=s.x-mx,dy=s.y-my,d=Math.hypot(dx,dy)||1;if(d<130){s.x+=dx/d*(130-d)*.04;s.y+=dy/d*(130-d)*.04}
   const a=(.25+.75*Math.abs(Math.sin(t/800+s.p)))*s.z,r=s.z*2.4;x.fillStyle=`rgba(${s.c},${a})`;x.beginPath();x.moveTo(s.x,s.y-r*2);x.lineTo(s.x+r*.5,s.y-r*.5);x.lineTo(s.x+r*2,s.y);x.lineTo(s.x+r*.5,s.y+r*.5);x.lineTo(s.x,s.y+r*2);x.lineTo(s.x-r*.5,s.y+r*.5);x.lineTo(s.x-r*2,s.y);x.lineTo(s.x-r*.5,s.y-r*.5);x.fill()}
   requestAnimationFrame(f)})(0);
