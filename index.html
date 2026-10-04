@@ -174,6 +174,16 @@ w(h);h.classList.add('ok')})()</script>
 <div class="row" style="justify-content:space-between"><h1>🎛️ Painel do evento</h1><button id="out">Sair</button></div>
 <div class="stats" id="st"></div><div class="card" style="margin-top:12px"><div class="bar" id="bar"></div><div class="leg" id="leg"></div></div>
 <h2>🛡️ Moderação</h2><div class="card" id="mod"></div>
+<h2>📣 Mensagem geral (WhatsApp)</h2><div class="card">
+<label>Mensagem <small>(use {nome}, {data} e {local})</small></label>
+<textarea id="bgm" rows="4" style="width:100%;margin:6px 0"></textarea>
+<div class="row"><select id="bga"><option value="approved">✅ Aprovados</option><option value="pending">⏳ Pendentes</option><option value="none">Ainda não confirmaram</option><option value="all">Todos com celular</option></select>
+<select id="bgw"><option value="web">💻 WhatsApp Web (computador)</option><option value="app">📱 Aplicativo (celular)</option></select>
+<label>Intervalo <input id="bgs" type="number" min="3" max="60" value="10" style="width:68px"> s</label></div>
+<div class="row"><button class="p" id="bgb">📣 Enviar mensagem geral</button><small id="bgn"></small></div>
+<div id="bgq" hidden style="margin-top:12px"><div class="bar"><i id="bgi" style="width:0;background:var(--acc)"></i></div><p id="bgt" style="margin:10px 0"></p>
+<div class="row"><button id="bgp">⏸ Pausar</button><button class="p" id="bgx">⏭ Próximo agora</button><button class="bad" id="bgz">⏹ Parar</button></div>
+<div id="bgl" style="max-height:220px;overflow:auto;font-size:.9em"></div></div></div>
 <h2>Convidados</h2><div class="card">
 <form id="add" class="row"><input id="an" placeholder="Nome do convidado" maxlength="80" required><input id="ap" type="tel" placeholder="Celular (opcional)"><input id="ao" placeholder="Observação (opcional)"><button class="p">Adicionar</button></form>
 <details style="margin:10px 0"><summary style="cursor:pointer">📋 Importar lista (um por linha: Nome, celular)</summary><form id="imp"><textarea id="il" rows="6" style="width:100%;margin:8px 0" placeholder="João Silva, (68) 99999-8888&#10;Maria Souza"></textarea><button class="p">Importar</button></form></details>
@@ -294,7 +304,7 @@ async function load(){
 const fmtP=p=>!p?'':p.length===13?'+55 ('+p.slice(2,4)+') '+p.slice(4,9)+'-'+p.slice(9):p.length===12?'+55 ('+p.slice(2,4)+') '+p.slice(4,8)+'-'+p.slice(8):p;
 const acts=g=>{const k=st(g);return`<span><button data-a="edit" data-id="${g.id}">✏️ Editar</button> ${k==='approved'&&g.phone?`<button class="ok" data-a="send" data-id="${g.id}">📲 Enviar msg</button> `:''}${k!=='approved'&&k!=='none'?`<button class="ok" data-a="approved" data-id="${g.id}">Aprovar</button> `:''}${k==='pending'?`<button class="bad" data-a="rejected" data-id="${g.id}">Recusar</button> `:''}${k!=='none'?`<button class="bad" data-a="del" data-id="${g.id}">Excluir confirmação</button>`:''} <button class="bad" data-a="rm" data-id="${g.id}">🗑️ Remover</button></span>`};
 const rowH=(g,full)=>`<div class="g"><span><b>${esc(g.name)}</b> <span class="tag">${LB[st(g)]}</span>${g.note?` <small>${esc(g.note)}</small>`:''}<br><small>📱 ${g.phone?esc(fmtP(g.phone)):'sem celular'}${[].concat(g.attendance)[0]?.msg_sent_at?' · ✅ mensagem enviada':''}</small>${full&&[].concat(g.attendance)[0]?`<br><small>${new Date([].concat(g.attendance)[0].confirmed_at).toLocaleString('pt-BR')}</small>`:''}</span>${acts(g)}</div>`;
-function draw(){const q=$('#q').value.toLowerCase(),f=$('#fl').value;
+function draw(){bgc();const q=$('#q').value.toLowerCase(),f=$('#fl').value;
  $('#mod').innerHTML=G.filter(g=>st(g)==='pending').map(g=>rowH(g,true)).join('')||'Nenhuma confirmação pendente.';
  $('#gl').innerHTML=G.filter(g=>(f==='all'||st(g)===f)&&(g.name.toLowerCase().includes(q)||(q.replace(/\D/g,'')&&(g.phone||'').includes(q.replace(/\D/g,''))))).map(g=>rowH(g)).join('')||'Nenhum convidado.'}
 document.addEventListener('click',async e=>{const b=e.target.closest('[data-a]');if(!b)return;const id=b.dataset.id,a=b.dataset.a,g=G.find(x=>x.id===id);let r;
@@ -319,6 +329,35 @@ $('#ec').onclick=()=>eg.close();
 $('#er').onclick=async()=>{if(!confirm('Remover '+EG.name+' da lista? A confirmação dele(a) também será apagada.'))return;const{error}=await sb.from('guests').delete().eq('id',EG.id);eg.close();if(error)alert('Erro: '+error.message);load()};
 $('#ef').onsubmit=async e=>{e.preventDefault();const{error}=await sb.from('guests').update({name:$('#en').value.replace(/\s+/g,' ').trim(),phone:$('#ep').value.trim()||null,note:$('#eo').value.trim()||null}).eq('id',EG.id);
  if(error)return alert(/duplicate/.test(error.message)?'Já existe um convidado com esse nome.':/telefone/.test(error.message)?'Celular inválido. Use DDD + número.':'Erro: '+error.message);eg.close();load()};
+/* ===== Mensagem geral: fila de conversas no WhatsApp ===== */
+const LS=(k,v)=>{try{return v===undefined?localStorage.getItem(k):v===null?localStorage.removeItem(k):localStorage.setItem(k,v)}catch(_){return null}};
+$('#bgm').value=LS('bg_msg')||'Oi, {nome}! 🎉 Passando para lembrar do aniversário de 20 anos de Capelasso & Anne: {data}, em {local}. Você confirma sua presença no restaurante respondendo esta mensagem? 🥳';
+if(/Android|iPhone|iPad/i.test(navigator.userAgent))$('#bgw').value='app';
+const inAud=g=>$('#bga').value==='all'||st(g)===$('#bga').value,aud=()=>G.filter(g=>g.phone&&inAud(g));
+function bgc(){const sem=G.filter(g=>!g.phone&&inAud(g)).length;$('#bgn').textContent=aud().length+' pessoa(s) com celular'+(sem?' · '+sem+' sem celular (ignorados)':'')}
+$('#bga').onchange=bgc;
+const bgTxt=g=>{const d=$('#ed').value?new Date($('#ed').value).toLocaleString('pt-BR',{weekday:'long',day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'}):'';return $('#bgm').value.replace(/\{nome\}/gi,g.name.trim().split(/\s+/)[0]).replace(/\{data\}/gi,d).replace(/\{local\}/gi,$('#el').value)};
+const bgUrl=g=>{const t=encodeURIComponent(bgTxt(g));return $('#bgw').value==='web'?`https://web.whatsapp.com/send?phone=${g.phone}&text=${t}`:`https://wa.me/${g.phone}?text=${t}`};
+let Q=null,wk=null,iv=null;
+function bgOpen(g){const u=bgUrl(g);try{if(Q.win&&!Q.win.closed){Q.win.location.href=u;return true}}catch(_){}Q.win=window.open(u,'wa_fila');return!!Q.win}
+function bgKill(){if(wk)wk.terminate();wk=null;clearInterval(iv)}
+function bgTimer(){bgKill();try{wk=new Worker(URL.createObjectURL(new Blob(['setInterval(()=>postMessage(1),1000)'],{type:'text/javascript'})));wk.onmessage=bgTick;wk.onerror=()=>{bgKill();iv=setInterval(bgTick,1000)}}catch(_){iv=setInterval(bgTick,1000)}}
+function bgTick(){if(!Q||Q.paused||Q.done)return;if(--Q.left<=0)bgGo(Q.i+1);else bgDraw()}
+function bgGo(i){if(!Q)return;Q.i=i;if(i>=Q.list.length){Q.done=true;Q.paused=true;bgKill();LS('bg_done',null);return bgDraw()}
+ const g=Q.list[i];if(bgOpen(g)){Q.blocked=false;Q.st[g.id]=1;const d=JSON.parse(LS('bg_done')||'[]');d.push(g.id);LS('bg_done',JSON.stringify(d))}else{Q.blocked=true;Q.paused=true}
+ Q.left=Q.gap;bgDraw()}
+function bgDraw(){const n=Q.list.length,g=Q.list[Math.min(Q.i,n-1)];$('#bgi').style.width=Math.min(Q.i+(Q.blocked?0:1),n)/n*100+'%';
+ $('#bgt').innerHTML=Q.done?`🎉 <b>Fila concluída!</b> ${n} conversa(s) abertas.`:`<b>${Q.i+1} de ${n}</b> · ${esc(g.name)} (${esc(fmtP(g.phone))})<br><small>${Q.blocked?'⚠️ O navegador bloqueou o pop-up. Libere pop-ups deste site e clique em ▶ Continuar.':Q.paused?'⏸ Pausado':'Próxima conversa abre em '+Q.left+'s'}</small>`;
+ $('#bgl').innerHTML=Q.list.map((x,k)=>k===Q.i&&!Q.done?`💬 <b>${esc(x.name)}</b><br>`:`${Q.st[x.id]?'✅':'⏳'} ${esc(x.name)}<br>`).join('');$('#bgp').textContent=Q.paused&&!Q.done?'▶ Continuar':'⏸ Pausar'}
+$('#bgb').onclick=()=>{let L=aud();if(!L.length)return alert('Ninguém com celular nesse grupo.');
+ const w=window.open('about:blank','wa_fila');if(!w)return alert('O navegador bloqueou o pop-up. Libere pop-ups para este site e tente de novo.');
+ const dn=JSON.parse(LS('bg_done')||'[]'),sk=L.filter(g=>dn.includes(g.id));
+ if(sk.length&&confirm(sk.length+' pessoa(s) já tiveram a conversa aberta antes.\nOK = pular essas e continuar de onde parou\nCancelar = incluir todas de novo'))L=L.filter(g=>!dn.includes(g.id));else LS('bg_done',null);
+ if(!L.length){w.close();return alert('Todos já foram abertos. Clique de novo para recomeçar.')}
+ LS('bg_msg',$('#bgm').value);Q={list:L,i:0,gap:Math.min(60,Math.max(3,+$('#bgs').value||10)),st:{},paused:false,win:w};$('#bgq').hidden=false;bgTimer();bgGo(0)};
+$('#bgp').onclick=()=>{if(!Q||Q.done)return;if(Q.blocked){Q.paused=false;return bgGo(Q.i)}Q.paused=!Q.paused;bgDraw()};
+$('#bgx').onclick=()=>{if(!Q||Q.done)return;Q.paused=false;bgGo(Q.blocked?Q.i:Q.i+1)};
+$('#bgz').onclick=()=>{bgKill();Q=null;$('#bgq').hidden=true};
 $('#q').oninput=draw;$('#fl').onchange=draw;setInterval(()=>!$('#app').hidden&&load(),30000);if(isAdm)boot();
 })();
 </script></body></html>
