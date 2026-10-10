@@ -116,6 +116,18 @@ dialog::backdrop{backdrop-filter:none;background:#000c}
 #ls li.empty{justify-content:center;opacity:.75;font-style:italic}
 .av{flex:none;display:grid;place-items:center;width:36px;height:36px;margin-right:12px;border-radius:50%;font:700 13px 'DM Sans',sans-serif;color:#160a2a;background:hsl(var(--h) 90% 72%);box-shadow:0 0 18px hsl(var(--h) 90% 60%/.45)}
 @media(prefers-reduced-motion:reduce){.ch,.rv,header>*{opacity:1!important;transform:none!important;filter:none!important}}
+
+/* ===== ENCERRAMENTO (quando o cronômetro zera) ===== */
+body.closed{overflow:hidden}body.closed #pr,body.closed #nv{display:none}
+#bye{position:fixed;inset:0;z-index:98;overflow:auto;display:flex;padding:24px;background:radial-gradient(60vmax 60vmax at 15% 10%,#7b2cff66,transparent),radial-gradient(50vmax 50vmax at 90% 35%,#ff3d8b44,transparent),radial-gradient(50vmax 50vmax at 30% 100%,#5ee7ff33,transparent),var(--bg);animation:byein 1.2s var(--e) both}
+@keyframes byein{from{opacity:0}}
+#bye .byec{margin:auto;max-width:560px;text-align:center;padding:36px 26px}
+#bye .byeh{font-size:54px;animation:bob 3s ease-in-out infinite}
+#bye h2{font-size:clamp(32px,8vw,52px);margin:10px 0 14px}
+#bye p{font-size:1.08em;margin-top:12px}
+#bye .big{font-size:clamp(100px,30vw,170px);margin-top:6px}
+#bye .byen{font-family:Fraunces,serif;font-style:italic;font-size:1.3em;color:var(--gold)}
+#bye .byes{margin-top:22px;font-size:.95em;opacity:.8}
 </style></head><body>
 <div id="pub"><div id="pr"></div><nav id="nv"><b>🎉 20</b><span><a href="#info">Informações</a><a href="#confirmar">Confirmar</a><a href="#lista">Lista</a></span></nav>
 <canvas id="cf" aria-hidden="true"></canvas>
@@ -163,6 +175,15 @@ w(h);h.classList.add('ok')})()</script>
 <dialog id="dg"></dialog>
 
 </div>
+<div id="bye" hidden role="status" aria-live="polite"><div class="byec">
+<div class="byeh">💜</div>
+<h2>Obrigado por esse reencontro!</h2>
+<p>Foi muito bom reencontrar os amigos. Cada abraço, risada e história fez este dia ser inesquecível.</p>
+<p class="byen">Até o próximo aniversário!</p>
+<p>Aí vem a festa grande, que vamos dar no aniversário de</p>
+<div class="big" aria-label="21 anos">21</div>
+<p class="byes">Com carinho,<br><b>Capelasso &amp; Anne</b> 🎉</p>
+</div></div>
 <div id="adm" hidden><main>
 <form id="login" class="card"><h1>Painel do evento</h1><input id="em" type="email" placeholder="E-mail" required autocomplete="username"><input id="pw" type="password" placeholder="Senha" required autocomplete="current-password"><button class="p" style="width:100%">Entrar</button><p id="err" style="color:var(--bad)" role="alert"></p></form>
 <dialog id="eg" style="max-width:420px;width:calc(100% - 32px);text-align:left"><form id="ef"><h2 style="margin:0 0 14px">✏️ Editar convidado</h2>
@@ -198,7 +219,7 @@ window.CFG = {
   SUPABASE_URL: "https://mkzkasgaxzpynrhrgmrt.supabase.co",
   SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1remthc2dheHpweW5yaHJnbXJ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA2NDQxNDYsImV4cCI6MjEwNjIyMDE0Nn0.Aax_OwDl4HZHMbN0LAqmGQvd9OqA_simRLWxBmINJCk", // a anon key é pública; NUNCA use a service_role aqui
   names: "Capelasso & Anne", age: 20, place: "Estância", dayLabel: "Dia 10",
-  eventDate: "2026-10-10T20:00:00-05:00"
+  eventDate: "2026-10-10T18:30:00-05:00"
 };
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
@@ -212,7 +233,7 @@ if(!isAdm)document.title=CFG.names+' — '+CFG.age+' anos';
 sb.from('event_settings').select('*').single().then(({data:d})=>{if(!d)return;date=new Date(d.event_date);
  document.querySelectorAll('[data-loc]').forEach(e=>e.textContent='📍 '+d.location);document.querySelectorAll('[data-loc2]').forEach(e=>e.textContent=d.location);
  $('#dt').textContent=date.toLocaleString('pt-BR',{day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'});
- document.querySelectorAll('[data-day]').forEach(e=>e.textContent='📅 Dia '+date.getDate())});
+ document.querySelectorAll('[data-day]').forEach(e=>e.textContent='📅 Dia '+date.getDate())}).then(()=>{ready=true;tick()},()=>{ready=true;tick()});
 let cfp=[],cfr=0;function boom(){if(RM)return;const c=$('#cf'),x=c.getContext('2d'),W=c.width=innerWidth,H=c.height=innerHeight,cols=['#ff3d8b','#ffc95c','#5ee7ff','#fff7ee','#9b5cff'];
  const add=(ox,oy,a,n)=>{for(let i=0;i<n;i++){const s=8+Math.random()*13,g=a+(Math.random()-.5)*.9;cfp.push({x:ox,y:oy,vx:Math.cos(g)*s,vy:Math.sin(g)*s,w:5+Math.random()*7,h:3+Math.random()*5,c:cols[Math.random()*5|0],r:Math.random()*6,vr:Math.random()*.4-.2,k:Math.random()*3|0,l:0,m:150+Math.random()*90})}};
  add(W/2,H*.5,-Math.PI/2,90);add(0,H,-1.1,70);add(W,H,-Math.PI+1.1,70);cancelAnimationFrame(cfr);
@@ -222,10 +243,18 @@ let cfp=[],cfr=0;function boom(){if(RM)return;const c=$('#cf'),x=c.getContext('2
 function countUp(el,to){if(RM){el.textContent=to;return}const s=+el.textContent||0,t0=performance.now();(function f(t){const k=Math.min((t-t0)/900,1);el.textContent=Math.round(s+(to-s)*k);k<1&&requestAnimationFrame(f)})(t0)}
 // Momento de abertura: a idade sobe de 0 a 20 e explode em confete
 $('#n19').textContent=0;!isAdm&&setTimeout(()=>{countUp($('#n19'),C.age);setTimeout(boom,950)},400);
-let cdb=null;function tick(){const d=date-Date.now(),el=$('#cd');if(d<=0){cdb=null;el.innerHTML='<div class="card" style="grid-column:1/-1"><strong>🎉 É HOJE! 🎉</strong></div>';return}
+let cdb=null,ready=false,closed=false,title0=document.title;
+function closeSite(){if(closed)return;closed=true;try{$('#dg').close()}catch(_){}
+ $('#pub').inert=true;document.body.classList.add('closed');$('#bye').hidden=false;document.title='Obrigado! — '+C.names;
+ clearInterval(ldIv);setTimeout(boom,400);setTimeout(boom,1800)}
+function openSite(){if(!closed)return;closed=false;$('#pub').inert=false;document.body.classList.remove('closed');$('#bye').hidden=true;document.title=title0;
+ load();ldIv=setInterval(load,20000)}
+function tick(){const d=date-Date.now(),el=$('#cd');
+ if(!isAdm&&ready){if(d<=0)closeSite();else if(closed)openSite()}
+ if(d<=0){cdb=null;el.innerHTML='<div class="card" style="grid-column:1/-1"><strong>🎉 É HOJE! 🎉</strong></div>';return}
  if(!cdb){el.innerHTML=['dias','horas','minutos','segundos'].map(l=>`<div class="card"><strong>00</strong>${l}</div>`).join('');cdb=[...el.querySelectorAll('strong')]}
  [d/864e5,d/36e5%24,d/6e4%60,d/1e3%60].forEach((n,i)=>{const v=String(Math.floor(n)).padStart(2,'0'),s=cdb[i];if(s.textContent!==v){s.textContent=v;if(!RM){s.classList.remove('bump');void s.offsetWidth;s.classList.add('bump')}}})}
-tick();setInterval(tick,1000);
+tick();setInterval(tick,1000);setTimeout(()=>{ready=true;tick()},3500);
 const msg=t=>$('#msg').textContent=t,dg=$('#dg'),seen=new Set();
 $('#f').onsubmit=async e=>{e.preventDefault();msg('');const n=$('#nm').value.replace(/\s+/g,' ').trim(),b=e.target.querySelector('button');
  if(n.length<3||/[<>]/.test(n))return msg('Digite seu nome completo.');
@@ -247,7 +276,7 @@ async function load(){const{data}=await sb.rpc('public_confirmed');if(!data)retu
  data.forEach(({name},i)=>{const li=document.createElement('li'),av=document.createElement('span'),t=document.createElement('span');av.className='av';av.textContent=name.trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase();av.style.setProperty('--h',[...name].reduce((a,c)=>a+c.charCodeAt(0)*7,0)%360);t.textContent=name;li.append(av,t);
   if(first){li.className='lin';li.style.setProperty('--i',Math.min(i,20))}else if(!seen.has(name))li.className='new';seen.add(name);ul.append(li)});
  countUp($('#count'),data.length);$('#ct').textContent=data.length===1?'pessoa já confirmou':'pessoas já confirmaram'}
-if(!isAdm){load();setInterval(load,20000)}
+var ldIv;if(!isAdm){load();ldIv=setInterval(load,20000)}
 if(!isAdm){const pr=$('#pr');addEventListener('scroll',()=>pr.style.width=scrollY/Math.max(1,document.documentElement.scrollHeight-innerHeight)*100+'%',{passive:true});
  const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){const t=e.target,d=parseFloat(t.style.getPropertyValue('--d'))||0;t.classList.add('in');io.unobserve(t);setTimeout(()=>t.classList.remove('rv','in'),1500+d*1e3)}}),{threshold:.1});
  document.querySelectorAll('#pub section,.grid .card').forEach(e=>{e.classList.add('rv');if(e.matches('.grid .card'))e.style.setProperty('--d',[...e.parentNode.children].indexOf(e)*.09+'s');io.observe(e)});
